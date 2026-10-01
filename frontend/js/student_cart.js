@@ -159,3 +159,49 @@ function renderAddedItems(total) {
 
 // Restore the browser's cart when the page loads.
 updateCart("", "GET", undefined, "");
+
+
+// Load and display products from MySQL through Python.
+async function loadProductCatalog() {
+  const productList = document.querySelector("#product-list");
+  const catalogMessage = document.querySelector("#catalog-message");
+
+  catalogMessage.textContent = "Loading products...";
+  productList.replaceChildren();
+
+  try {
+    const response = await fetch("/api/cart/catalog");
+
+    if (!(response.headers.get("content-type") || "")
+      .includes("application/json")) {
+      throw new Error("Open this page through the Python server.");
+    }
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || "Could not load products.");
+    }
+
+    for (const product of result.products) {
+      const row = document.createElement("tr");
+      const codeCell = document.createElement("td");
+      const nameCell = document.createElement("td");
+      const costCell = document.createElement("td");
+
+      codeCell.textContent = product.code;
+      nameCell.textContent = product.name;
+      costCell.textContent = `$${product.price}`;
+
+      row.append(codeCell, nameCell, costCell);
+      productList.append(row);
+    }
+
+    catalogMessage.textContent =
+      result.products.length === 0 ? "No products available." : "";
+  } catch (error) {
+    catalogMessage.textContent = error.message;
+  }
+}
+
+loadProductCatalog();

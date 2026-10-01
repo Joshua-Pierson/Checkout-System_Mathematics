@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Student Cart</title>
   <script src="js/student_cart.js" defer></script>
+  <script src="js/app.js" defer></script>
 </head>
 <body>
     <nav aria-label="Choose view">
@@ -32,6 +33,21 @@
       <p id="item-message" role="status" aria-live="polite"></p>
       <div id="added-items"></div>
       <p id="cart-total">Cart total: $0.00</p>
+
+      <h3>Available Products</h3>
+
+        <p id="catalog-message" role="status" aria-live="polite"></p>
+
+        <table>
+        <thead>
+            <tr>
+            <th scope="col">Item Code</th>
+            <th scope="col">Item Name</th>
+            <th scope="col">Cost</th>
+            </tr>
+        </thead>
+        <tbody id="product-list"></tbody>
+        </table>
     </section>
 <!-- Manager section -->
     <section id="manager-section" aria-labelledby="manager-heading" hidden>

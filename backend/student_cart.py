@@ -215,3 +215,34 @@ def change_cart_item(code):
     # Reassign the dictionary so Flask saves the updated session.
     session["cart"] = quantities
     return jsonify(result)
+
+# Display active products from the database.
+
+
+@student_cart.get("/catalog")
+def view_catalog():
+    with get_connection() as connection:
+        with connection.cursor(dictionary=True) as cursor:
+            cursor.execute(
+                """
+                SELECT i.item_code, i.item_name, i.price
+                FROM items AS i
+                JOIN categories AS c
+                    ON c.category_id = i.category_id
+                WHERE i.is_active = TRUE
+                  AND c.is_active = TRUE
+                ORDER BY i.item_name
+                """
+            )
+            products = cursor.fetchall()
+
+    return jsonify({
+        "products": [
+            {
+                "code": product["item_code"],
+                "name": product["item_name"],
+                "price": format(product["price"], ".2f")
+            }
+            for product in products
+        ]
+    })
