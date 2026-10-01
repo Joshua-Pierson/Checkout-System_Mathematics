@@ -1,9 +1,9 @@
 // Shared API requests: connect the front-end screens to the back-end system.
-<<<<<<< HEAD
+
 
 async function fetchInventory() {
     try {
-        const response = await fetch('http://localhost:5000/api/items');
+        const response = await fetch('http://127.0.0.1:5000/api/items');
         if (!response.ok) throw new Error('Network topology failure');
         
         const data = await response.json();
@@ -14,6 +14,3 @@ async function fetchInventory() {
     }
 }
 
-=======
-// Use fetch() to send requests to the Python backend.
->>>>>>> main

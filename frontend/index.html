@@ -1,32 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<<<<<<< HEAD
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checkout System</title>
-</head>
-<body>
-    <h1>Inventory System Active</h1>
-    
-    <!-- Wire the client network script -->
-    <script src="js/api.js"></script>
-=======
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Student Cart</title>
+  <title>Checkout System</title>
+
+  <script src="js/api.js" defer></script>
   <script src="js/student_cart.js" defer></script>
   <script src="js/app.js" defer></script>
 </head>
 <body>
-    <nav aria-label="Choose view">
-        <button id="student-view-button" type="button">Student</button>
-        <button id="manager-view-button" type="button">Manager</button>
-    </nav>
+  <h1>Checkout System</h1>
+
+  <!-- Switch between the student and manager views. -->
+  <nav aria-label="Choose view">
+    <button id="student-view-button" type="button">Student</button>
+    <button id="manager-view-button" type="button">Manager</button>
+  </nav>
+
   <main>
-<!-- Student section -->
+    <!-- Student view: available products and shopping cart. -->
     <section id="student-section" aria-labelledby="cart-heading">
       <h2 id="cart-heading">Student Cart</h2>
+
+      <h3>Available Products</h3>
+      <p id="catalog-message" role="status" aria-live="polite"></p>
+
+      <table>
+        <caption>Product codes, names, and prices</caption>
+        <thead>
+          <tr>
+            <th scope="col">Item Code</th>
+            <th scope="col">Item Name</th>
+            <th scope="col">Item Cost</th>
+          </tr>
+        </thead>
+        <tbody id="product-list"></tbody>
+      </table>
+
+      <h3>Add an Item</h3>
 
       <form id="add-item-form">
         <label for="item-code">Item code</label>
@@ -35,37 +47,29 @@
           name="item-code"
           type="text"
           maxlength="30"
+          placeholder="Example: 1001"
           required
           autocomplete="off"
-        />
+        >
         <button type="submit">Add Item</button>
       </form>
 
       <p id="item-message" role="status" aria-live="polite"></p>
+
+      <h3>Your Cart</h3>
       <div id="added-items"></div>
       <p id="cart-total">Cart total: $0.00</p>
-
-      <h3>Available Products</h3>
-
-        <p id="catalog-message" role="status" aria-live="polite"></p>
-
-        <table>
-        <thead>
-            <tr>
-            <th scope="col">Item Code</th>
-            <th scope="col">Item Name</th>
-            <th scope="col">Cost</th>
-            </tr>
-        </thead>
-        <tbody id="product-list"></tbody>
-        </table>
     </section>
-<!-- Manager section -->
-    <section id="manager-section" aria-labelledby="manager-heading" hidden>
+
+    <!-- Manager view: your teammate can add the manager UI here. -->
+    <section
+      id="manager-section"
+      aria-labelledby="manager-heading"
+      hidden
+    >
       <h2 id="manager-heading">Manager View</h2>
-      <!-- Manager content goes here -->
+      <p>Manager content goes here.</p>
     </section>
   </main>
->>>>>>> main
 </body>
 </html>
