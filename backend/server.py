@@ -4,7 +4,7 @@ from inventory_model import InventoryModel
 
 app = Flask(__name__)
 CORS(app) # Neutralizes Cross-Origin Resource Sharing strictures
-db = InventoryModel(file_path='data/items.csv')
+db = InventoryModel(file_path='backend/data/items.csv')
 
 @app.route('/api/items', methods=['GET'])
 def get_items():
