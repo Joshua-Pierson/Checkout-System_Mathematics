@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<<<<<<< HEAD
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Checkout System</title>
@@ -10,5 +11,61 @@
     
     <!-- Wire the client network script -->
     <script src="js/api.js"></script>
+=======
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Cart</title>
+  <script src="js/student_cart.js" defer></script>
+  <script src="js/app.js" defer></script>
+</head>
+<body>
+    <nav aria-label="Choose view">
+        <button id="student-view-button" type="button">Student</button>
+        <button id="manager-view-button" type="button">Manager</button>
+    </nav>
+  <main>
+<!-- Student section -->
+    <section id="student-section" aria-labelledby="cart-heading">
+      <h2 id="cart-heading">Student Cart</h2>
+
+      <form id="add-item-form">
+        <label for="item-code">Item code</label>
+        <input
+          id="item-code"
+          name="item-code"
+          type="text"
+          maxlength="30"
+          required
+          autocomplete="off"
+        />
+        <button type="submit">Add Item</button>
+      </form>
+
+      <p id="item-message" role="status" aria-live="polite"></p>
+      <div id="added-items"></div>
+      <p id="cart-total">Cart total: $0.00</p>
+
+      <h3>Available Products</h3>
+
+        <p id="catalog-message" role="status" aria-live="polite"></p>
+
+        <table>
+        <thead>
+            <tr>
+            <th scope="col">Item Code</th>
+            <th scope="col">Item Name</th>
+            <th scope="col">Cost</th>
+            </tr>
+        </thead>
+        <tbody id="product-list"></tbody>
+        </table>
+    </section>
+<!-- Manager section -->
+    <section id="manager-section" aria-labelledby="manager-heading" hidden>
+      <h2 id="manager-heading">Manager View</h2>
+      <!-- Manager content goes here -->
+    </section>
+  </main>
+>>>>>>> main
 </body>
 </html>

@@ -1,4 +1,5 @@
 // Shared API requests: connect the front-end screens to the back-end system.
+<<<<<<< HEAD
 
 async function fetchInventory() {
     try {
@@ -13,3 +14,6 @@ async function fetchInventory() {
     }
 }
 
+=======
+// Use fetch() to send requests to the Python backend.
+>>>>>>> main
