@@ -1,9 +1,9 @@
 item_id,name,unit_price,category,stock_quantity
-1001,Introduction to Algorithms,85.00,Textbooks,40
-1002,Organic Chemistry 9th Ed,120.50,Textbooks,15
-1003,College Ruled Notebook 5-Pack,12.99,Supplies,100
-1004,Graphing Calculator TI-84,115.00,Electronics,25
-1005,University Logo Hoodie,45.00,Apparel,60
-1006,Mechanical Pencils 0.5mm,6.50,Supplies,200
-1007,Noise Cancelling Headphones,199.99,Electronics,10
-1008,Chemistry Lab Goggles,14.00,Supplies,85
+1001,Introduction to Algorithms,85.00,BOOKS!,40
+1002,Graphing Calculator TI-84,115.00,course supplies,25
+1003,Blue Scantrons 5-Pack,3.50,exam supplies,100
+1004,Energy Drink,2.99,drinks,50
+1005,Potato Chips,1.50,snacks,75
+1006,University Hoodie,45.00,apparel,60
+1007,Charcoal Sketchpad,12.00,art supplies,30
+1008,Ballpoint Pens 10-Pack,4.50,stationery,120
