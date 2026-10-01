@@ -1,0 +1,9 @@
+item_id,name,unit_price,category,stock_quantity
+1001,Introduction to Algorithms,85.00,Textbooks,40
+1002,Organic Chemistry 9th Ed,120.50,Textbooks,15
+1003,College Ruled Notebook 5-Pack,12.99,Supplies,100
+1004,Graphing Calculator TI-84,115.00,Electronics,25
+1005,University Logo Hoodie,45.00,Apparel,60
+1006,Mechanical Pencils 0.5mm,6.50,Supplies,200
+1007,Noise Cancelling Headphones,199.99,Electronics,10
+1008,Chemistry Lab Goggles,14.00,Supplies,85
