@@ -1,0 +1,38 @@
+<html>
+
+<!-- This HTML page contains logic for editing items in a catalog. -->
+
+    <head>
+        <link rel="stylesheet" href="../style/layout.css">
+    </head>
+
+<body>
+    
+    <h1 style="color: rgb(255, 255, 255);">Edit Catalog</h1>
+
+    <nav>
+        <ul>
+            <li><a href="../Manager Menu.html">Go Back</a></li>
+    
+        </ul>
+    </nav>
+
+    <form id="editForm" method="post">
+        <label for="itemName">Item Name:</label>
+        <input type="text" id="itemName" name="itemName"><br><br>
+
+        <label for="itemID">Item ID:</label>
+        <input type="text" id="itemID" name="itemID"><br><br>
+
+        <label for="itemCategory">Item Category:</label>
+        <input type="text" id="itemCategory" name="itemCategory"><br><br>
+
+        <label for="itemPrice">Item Price:</label>
+        <input type="number" id="itemPrice" name="itemPrice"><br><br>
+
+        <input type="submit" value="Edit Catalog">
+    </form>
+
+<script src="../script/magics.js"></script>
+</body>
+</html>
