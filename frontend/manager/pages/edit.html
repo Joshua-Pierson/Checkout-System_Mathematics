@@ -18,17 +18,23 @@
     </nav>
 
     <form id="editForm" method="post">
-        <label for="itemName">Item Name:</label>
-        <input type="text" id="itemName" name="itemName"><br><br>
+        <label for="item_id">Item ID:</label>
+        <input type="text" id="item_id" name="item_id" required><br><br>
+        
+        <label for="name">Item Name:</label>
+        <input type="text" id="name" name="name" required><br><br>
 
-        <label for="itemID">Item ID:</label>
-        <input type="text" id="itemID" name="itemID"><br><br>
+        <label for="unit_price">Item Price:</label>
+        <input type="number" step=".01" id="unit_price" name="unit_price" required><br><br>
 
-        <label for="itemCategory">Item Category:</label>
-        <input type="text" id="itemCategory" name="itemCategory"><br><br>
+        <label for="category">Item Category:</label>
+        <input type="text" id="category" name="category" required><br><br>
 
-        <label for="itemPrice">Item Price:</label>
-        <input type="number" id="itemPrice" name="itemPrice"><br><br>
+        <label for="stock_quantity">Stock Quantity:</label>
+        <input type="number" id="stock_quantity" name="stock_quantity" required><br><br>
+
+        <label for="tax_rate">Tax Rate:</label>
+        <input type="number" step="0.0001" id="tax_rate" name="tax_rate" min="0" max="1" required><br><br>
 
         <input type="submit" value="Edit Catalog">
     </form>
