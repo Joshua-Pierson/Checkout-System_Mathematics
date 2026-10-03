@@ -1,0 +1,9 @@
+item_id,name,unit_price,category,stock_quantity,tax_rate
+1001,Introduction to Algorithms,85.00,BOOKS!,40,0.0
+1002,Graphing Calculator TI-84,115.00,course supplies,25,0.0825
+1003,Blue Scantrons 5-Pack,3.50,exam supplies,100,0.0825
+1004,Energy Drink,2.99,drinks,50,0.0825
+1005,Potato Chips,1.50,snacks,75,0.0
+1006,University Hoodie,45.00,apparel,60,0.0825
+1007,Charcoal Sketchpad,12.00,art supplies,30,0.0825
+1008,Ballpoint Pens 10-Pack,4.50,stationery,120,0.0825
