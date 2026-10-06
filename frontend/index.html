@@ -7,7 +7,8 @@
 
   <script src="js/api.js" defer></script>
   <script src="js/student_cart.js" defer></script>
-  <script src="js/app.js" defer></script>
+  <script src="js/checkout_receipt.js" defer></script>
+  <script src="js/app.js" defer></script>  
 </head>
 <body>
   <h1>Checkout System</h1>
@@ -59,6 +60,25 @@
       <h3>Your Cart</h3>
       <div id="added-items"></div>
       <p id="cart-total">Cart total: $0.00</p>
+    
+      <h3>Checkout</h3>
+
+<button type="button" onclick="showPaymentOptions()">
+Show Payment Options
+</button>
+
+<button type="button" onclick="cancelCheckout()">
+Cancel Checkout
+</button>
+
+<p id="checkout-message"></p>
+
+<h3>Receipt</h3>
+
+<div id="receipt-output">
+No receipt generated yet.
+</div>
+
     </section>
 
     <!-- Manager view: your teammate can add the manager UI here. -->
