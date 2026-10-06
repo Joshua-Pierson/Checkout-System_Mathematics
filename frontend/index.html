@@ -18,27 +18,44 @@
     <button id="manager-view-button" type="button">Manager</button>
   </nav>
 
-  <main>
-    <!-- Student view: available products and shopping cart. -->
+    <main>
     <section id="student-section" aria-labelledby="cart-heading">
       <h2 id="cart-heading">Student Cart</h2>
 
       <h3>Available Products</h3>
+
+      <!-- Task 1939: Browse categories. -->
+      <label for="category-filter">Browse by category</label>
+      <select id="category-filter" disabled>
+        <option value="">All categories</option>
+      </select>
+
+      <!-- Task 1940: Search by part of an item name. -->
+      <label for="product-search">Search by item name</label>
+      <input
+        id="product-search"
+        type="search"
+        placeholder="Type part of a name"
+        disabled
+      >
+
       <p id="catalog-message" role="status" aria-live="polite"></p>
 
       <table>
-        <caption>Product codes, names, and prices</caption>
+        <caption>Choose a category or search, then add an item</caption>
         <thead>
           <tr>
             <th scope="col">Item Code</th>
             <th scope="col">Item Name</th>
             <th scope="col">Item Cost</th>
+            <th scope="col">Category</th>
+            <th scope="col">Action</th>
           </tr>
         </thead>
         <tbody id="product-list"></tbody>
       </table>
 
-      <h3>Add an Item</h3>
+      <h3>Add an Item by Code</h3>
 
       <form id="add-item-form">
         <label for="item-code">Item code</label>
@@ -59,9 +76,13 @@
       <h3>Your Cart</h3>
       <div id="added-items"></div>
       <p id="cart-total">Cart total: $0.00</p>
+
+      <!-- Cancel the whole transaction. -->
+      <button id="cancel-transaction" type="button" disabled>
+        Cancel Transaction
+      </button>
     </section>
 
-    <!-- Manager view: your teammate can add the manager UI here. -->
     <section
       id="manager-section"
       aria-labelledby="manager-heading"
