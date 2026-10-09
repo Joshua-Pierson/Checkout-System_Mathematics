@@ -13,3 +13,9 @@ def get_items():
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
+
+CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+@app.route('/api/inventory', methods=['GET'])
+def get_inventory():
+    return {"status": "success", "data": []}
