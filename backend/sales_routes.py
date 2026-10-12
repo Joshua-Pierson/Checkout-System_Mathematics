@@ -28,6 +28,7 @@ def create_sale():
             items=data.get("items"),
             payment_method=data.get("payment_method"),
             cash_received=data.get("cash_received"),
+            card_number=data.get("card_number"),
         )
     except SaleError as err:
         return jsonify({"status": "error", "message": str(err)}), err.status
