@@ -1,7 +1,7 @@
 services:
   backend:
     build: 
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
     ports:
       - "5000:5000"
@@ -17,32 +17,34 @@ services:
       - DB_NAME=pos_inventory
     depends_on:
       - db
+    # Triggers the Python seed script before launching the Flask server
+    command: >
+      bash -c "python seed.py && flask run --host=0.0.0.0"
 
-  # scaffolded for tomorrow's stand-up
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #   ports:
-  #     - "3000:3000"
-  #   volumes:
-  #     - ./frontend:/app
-  #     - /app/node_modules
-  #   environment:
-  #     - REACT_APP_API_URL=http://localhost:5000
-  #   depends_on:
-  #     - backend
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_API_URL=http://backend:5000
+    depends_on:
+      - backend
 
   db:
     image: mysql:8.0
     ports:
-      - "3307:3306"
+      - "3306:3306"
     environment:
       - MYSQL_ROOT_PASSWORD=rootpassword
       - MYSQL_DATABASE=pos_inventory
     volumes:
       - mysql_data:/var/lib/mysql
-      # Uncomment tomorrow once init.sql is created
-      # - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      # Projects the SQL schema into the container's native boot sequence
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
 volumes:
   mysql_data:
