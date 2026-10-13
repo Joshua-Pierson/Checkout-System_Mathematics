@@ -6,6 +6,7 @@ from mysql.connector.pooling import PooledMySQLConnection
 # Explicitly load your environment variables before the class initializes
 load_dotenv("backend/db_access.env")
 
+
 class MySQLInventoryDAO:
     def __init__(self):
         self.connection_pool = pooling.MySQLConnectionPool(
@@ -16,7 +17,7 @@ class MySQLInventoryDAO:
             port=3307,
             database=os.getenv("DB_NAME", "pos_inventory"),
             user=os.getenv("DB_USER", "root"),
-            password=os.getenv("DB_PASSWORD", "")
+            password=os.getenv("DB_PASSWORD", ""),
         )
 
     def get_connection(self) -> PooledMySQLConnection:
@@ -44,7 +45,9 @@ class MySQLInventoryDAO:
             cursor.close()
             conn.close()
 
-    def add_item(self, item_id: str, name: str, category: str, price: float, stock_quantity: int):
+    def add_item(
+        self, item_id: str, name: str, category: str, price: float, stock_quantity: int
+    ):
         conn = self.get_connection()
         cursor = conn.cursor()
         try:
@@ -58,7 +61,9 @@ class MySQLInventoryDAO:
             cursor.close()
             conn.close()
 
-    def update_item(self, item_id: str, name: str, category: str, price: float, stock_quantity: int):
+    def update_item(
+        self, item_id: str, name: str, category: str, price: float, stock_quantity: int
+    ):
         conn = self.get_connection()
         cursor = conn.cursor()
         try:
@@ -84,8 +89,11 @@ class MySQLInventoryDAO:
             cursor.close()
             conn.close()
 
+
 if __name__ == "__main__":
     dao = MySQLInventoryDAO()
     connection = dao.get_connection()
-    print("Database connection pool established successfully:", connection.is_connected())
+    print(
+        "Database connection pool established successfully:", connection.is_connected()
+    )
     connection.close()

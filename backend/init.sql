@@ -1,9 +1,12 @@
--- init.sql
+CREATE DATABASE IF NOT EXISTS pos_inventory;
+USE pos_inventory;
+
 CREATE TABLE IF NOT EXISTS inventory (
     item_id INT AUTO_INCREMENT PRIMARY KEY,
-    sku VARCHAR(50) UNIQUE NOT NULL,
     name VARCHAR(255) NOT NULL,
-    price DECIMAL(10, 2) NOT NULL,
+    unit_price DECIMAL(10, 2) NOT NULL,
+    category VARCHAR(100) NOT NULL,
     stock_quantity INT DEFAULT 0,
+    tax_rate DECIMAL(5, 4) NOT NULL,
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
