@@ -1,0 +1,12 @@
+/* Only the existing rules from frontend/manager/style/layout.css. */
+body.original-manager-page {
+  background-color: darkslategray;
+  text-align: center;
+}
+body.original-manager-page button {
+  padding: 15px;
+  margin: 5px;
+}
+body.original-manager-page a {
+  color: aliceblue;
+}
