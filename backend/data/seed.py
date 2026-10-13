@@ -29,15 +29,20 @@ def seed_database():
     # Verify if data already exists to prevent duplicate ingestion on container restarts
     cursor.execute("SELECT COUNT(*) FROM inventory")
     if cursor.fetchone()[0] == 0:
-        if os.path.exists("inventory.csv"):
-            with open("inventory.csv", mode="r") as file:
+        # items.csv sits next to this file (backend/data/items.csv)
+        csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "items.csv")
+        if not os.path.exists(csv_path):
+            print(f"Seed skipped: {csv_path} not found.")
+        else:
+            with open(csv_path, mode="r", newline="") as file:
                 csv_reader = csv.DictReader(file)
                 for row in csv_reader:
                     cursor.execute(
                         """INSERT INTO inventory 
-                        (name, unit_price, category, stock_quantity, tax_rate) 
-                        VALUES (%s, %s, %s, %s, %s)""",
+                        (item_id, name, unit_price, category, stock_quantity, tax_rate)
+                        VALUES (%s, %s, %s, %s, %s, %s)""",
                         (
+                            row["item_id"],
                             row["name"],
                             row["unit_price"],
                             row["category"],

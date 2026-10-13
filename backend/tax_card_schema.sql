@@ -1,17 +1,16 @@
--- Tax-exempt + card payment changes. Run AFTER sales_schema.sql.
-USE checkout_system;
+-- Tax-exempt changes for the checkout system.
+-- A FRESH Docker database already gets these from init.sql.
+-- Run this only to upgrade a database that was created before (old mysql_data volume).
+USE pos_inventory;
 
 -- Item-level exemption: TRUE means this item is never taxed.
-ALTER TABLE inventory_records
+-- Remove this line if the column already exists.
+ALTER TABLE inventory
     ADD COLUMN tax_exempt BOOLEAN NOT NULL DEFAULT FALSE;
 
 -- Category-level exemption: every item in a listed category is not taxed
 -- (new items added to that category later are covered automatically).
 CREATE TABLE IF NOT EXISTS tax_exempt_categories (
-    category   VARCHAR(50) PRIMARY KEY,
+    category   VARCHAR(100) PRIMARY KEY,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
--- Card payments: keep ONLY the last 4 digits, never the full card number.
-ALTER TABLE sales
-    ADD COLUMN card_last4 CHAR(4) NULL;

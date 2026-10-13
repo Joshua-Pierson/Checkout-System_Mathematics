@@ -1,7 +1,8 @@
 """Catalog API (search, browse, grouping).
 
 GET  /api/items/search?q=calc            -> items whose name contains "calc" (or code = "calc")
-GET  /api/categories                     -> [{"category", "item_count", "in_stock_count"}]
+GET  /api/categories/summary             -> [{"category", "item_count", "in_stock_count"}]
+     (plain /api/categories with just the names lives in main.py)
 GET  /api/categories/<category>/items    -> items in that category
 GET  /api/catalog/grouped                -> {"books": [...], "drinks": [...]}
 POST /api/categories/normalize           -> manager: clean up all category names
@@ -28,7 +29,7 @@ def search_items():
     return jsonify({"status": "success", "data": _catalog_dao.search_items(text)}), 200
 
 
-@catalog_bp.route("/api/categories", methods=["GET"])
+@catalog_bp.route("/api/categories/summary", methods=["GET"])
 def list_categories():
     return jsonify({"status": "success", "data": _catalog_dao.list_categories()}), 200
 
