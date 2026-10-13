@@ -1,11 +1,7 @@
 -- Sales tables for the checkout system.
--- Run AFTER inventory_schema.sql (needs the inventory_records table).
-USE checkout_system;
-
--- Tax rate per item (0.0000 = tax-exempt). Default is the Texas rate 8.25%.
--- Remove this line if the column already exists.
-ALTER TABLE inventory_records
-    ADD COLUMN tax_rate DECIMAL(5, 4) NOT NULL DEFAULT 0.0825;
+-- A FRESH Docker database already gets these from init.sql.
+-- Run this only to upgrade a database that was created before (old mysql_data volume).
+USE pos_inventory;
 
 -- One row per completed (paid) sale.
 CREATE TABLE IF NOT EXISTS sales (
@@ -16,6 +12,7 @@ CREATE TABLE IF NOT EXISTS sales (
     total          DECIMAL(10, 2) NOT NULL,
     amount_paid    DECIMAL(10, 2) NOT NULL,
     change_due     DECIMAL(10, 2) NOT NULL DEFAULT 0,
+    card_last4     CHAR(4) NULL,                     -- never the full card number
     created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -24,8 +21,8 @@ CREATE TABLE IF NOT EXISTS sales (
 CREATE TABLE IF NOT EXISTS sale_items (
     sale_item_id INT AUTO_INCREMENT PRIMARY KEY,
     sale_id      INT            NOT NULL,
-    item_id      VARCHAR(50)    NOT NULL,
-    name         VARCHAR(100)   NOT NULL,
+    item_id      INT            NOT NULL,
+    name         VARCHAR(255)   NOT NULL,
     unit_price   DECIMAL(10, 2) NOT NULL,
     quantity     INT            NOT NULL,
     tax_rate     DECIMAL(5, 4)  NOT NULL,

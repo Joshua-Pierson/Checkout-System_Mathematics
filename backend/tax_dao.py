@@ -7,7 +7,7 @@ An item is NOT taxed when either:
 Checkout (sales_dao.py) uses the same rule via EFFECTIVE_TAX_RATE_SQL.
 """
 
-# SQL snippet used by checkout. Needs inventory_records aliased as "i" and
+# SQL snippet used by checkout. Needs the inventory table aliased as "i" and
 #   LEFT JOIN tax_exempt_categories tec ON tec.category = i.category
 EFFECTIVE_TAX_RATE_SQL = (
     "CASE WHEN i.tax_exempt OR tec.category IS NOT NULL THEN 0 ELSE i.tax_rate END"
@@ -26,10 +26,10 @@ class TaxDAO:
         conn = self.inventory_dao.get_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("SELECT 1 FROM inventory_records WHERE item_id = %s", (item_id,))
+            cursor.execute("SELECT 1 FROM inventory WHERE item_id = %s", (item_id,))
             if cursor.fetchone() is None:
                 raise NotFound(f"Unknown item code: {item_id}")
-            cursor.execute("UPDATE inventory_records SET tax_exempt = %s WHERE item_id = %s",
+            cursor.execute("UPDATE inventory SET tax_exempt = %s WHERE item_id = %s",
                            (bool(exempt), item_id))
             conn.commit()
         finally:
@@ -40,7 +40,7 @@ class TaxDAO:
         conn = self.inventory_dao.get_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("SELECT 1 FROM inventory_records WHERE category = %s LIMIT 1", (category,))
+            cursor.execute("SELECT 1 FROM inventory WHERE category = %s LIMIT 1", (category,))
             if cursor.fetchone() is None:
                 raise NotFound(f"Unknown category: {category}")
             if exempt:
@@ -59,7 +59,7 @@ class TaxDAO:
         try:
             cursor.execute("SELECT category FROM tax_exempt_categories ORDER BY category")
             categories = [row[0] for row in cursor.fetchall()]
-            cursor.execute("SELECT item_id FROM inventory_records WHERE tax_exempt ORDER BY item_id")
+            cursor.execute("SELECT item_id FROM inventory WHERE tax_exempt ORDER BY item_id")
             items = [row[0] for row in cursor.fetchall()]
         finally:
             cursor.close()

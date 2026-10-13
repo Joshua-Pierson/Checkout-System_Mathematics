@@ -7,9 +7,9 @@ from catalog_routes import init_catalog_routes
 from tax_dao import TaxDAO
 
 EXTRA = [  # messy categories on purpose, like the real items.csv ("BOOKS!")
-    ("1004", "Energy Drink", "Drinks!", "2.99", 50),
-    ("1005", "Calculus Workbook", "BOOKS!", "40.00", 0),
-    ("1006", "100% Cotton Hoodie", "  Apparel ", "35.00", 8),
+    (1004, "Energy Drink", "Drinks!", "2.99", 50, "0.0825"),
+    (1005, "Calculus Workbook", "BOOKS!", "40.00", 0, "0.0000"),
+    (1006, "100% Cotton Hoodie", "  Apparel ", "35.00", 8, "0.0825"),
 ]
 
 
@@ -17,8 +17,8 @@ EXTRA = [  # messy categories on purpose, like the real items.csv ("BOOKS!")
 def catalog(inventory_dao):
     conn = inventory_dao.get_connection()
     cur = conn.cursor()
-    cur.executemany("INSERT INTO inventory_records (item_id, name, category, price, stock_quantity) "
-                    "VALUES (%s, %s, %s, %s, %s)", EXTRA)
+    cur.executemany("INSERT INTO inventory (item_id, name, category, unit_price, stock_quantity, "
+                    "tax_rate) VALUES (%s, %s, %s, %s, %s, %s)", EXTRA)
     conn.commit()
     cur.close()
     conn.close()
@@ -41,16 +41,16 @@ def test_normalize_category(raw, clean):
 
 # ---------- search ----------
 def test_search_is_case_insensitive(catalog):
-    assert ids(catalog.search_items("CALC")) == ["1005", "1002"]   # "Calculus..." starts with it
-    assert ids(catalog.search_items("calculator")) == ["1002"]
+    assert ids(catalog.search_items("CALC")) == [1005, 1002]   # "Calculus..." starts with it
+    assert ids(catalog.search_items("calculator")) == [1002]
 
 
 def test_search_by_exact_code_comes_first(catalog):
-    assert ids(catalog.search_items("1003"))[0] == "1003"
+    assert ids(catalog.search_items("1003"))[0] == 1003
 
 
 def test_search_wildcards_are_literal(catalog):
-    assert ids(catalog.search_items("100%")) == ["1006"]   # not "match everything"
+    assert ids(catalog.search_items("100%")) == [1006]   # not "match everything"
     assert catalog.search_items("_") == []
 
 
@@ -70,10 +70,10 @@ def test_browse_after_normalize(catalog):
     assert changes == {"Drinks!": "drinks", "BOOKS!": "books", "  Apparel ": "apparel"}
     cats = {c["category"]: c for c in catalog.list_categories()}
     assert cats["books"]["item_count"] == 2 and cats["books"]["in_stock_count"] == 1
-    assert ids(catalog.items_in_category("Books!")) == ["1005", "1001"]   # messy input OK
+    assert ids(catalog.items_in_category("Books!")) == [1005, 1001]   # messy input OK
     assert catalog.items_in_category("spaceships") == []
     grouped = catalog.grouped_catalog()
-    assert list(grouped) == sorted(grouped) and ids(grouped["drinks"]) == ["1004"]
+    assert list(grouped) == sorted(grouped) and ids(grouped["drinks"]) == [1004]
     assert catalog.normalize_all_categories() == {}    # running twice changes nothing
 
 
@@ -88,12 +88,12 @@ def test_catalog_api(catalog):
     app = Flask(__name__)
     init_catalog_routes(app, catalog)
     c = app.test_client()
-    assert c.get("/api/items/search?q=drink").get_json()["data"][0]["item_id"] == "1004"
+    assert c.get("/api/items/search?q=drink").get_json()["data"][0]["item_id"] == 1004
     assert c.get("/api/items/search?q=").status_code == 400
     assert c.get("/api/items/search?q=" + "x" * 101).status_code == 400
     r = c.post("/api/categories/normalize")
     assert r.status_code == 200 and r.get_json()["data"]["renamed"]["BOOKS!"] == "books"
-    assert c.get("/api/categories").status_code == 200
+    assert c.get("/api/categories/summary").status_code == 200
     assert c.get("/api/categories/drinks/items").status_code == 200
     assert c.get("/api/categories/spaceships/items").status_code == 404
     assert "books" in c.get("/api/catalog/grouped").get_json()["data"]

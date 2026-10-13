@@ -27,7 +27,7 @@ def _item_json(row):
         "item_id": row["item_id"],
         "name": row["name"],
         "category": row["category"],
-        "unit_price": float(Decimal(row["price"])),
+        "unit_price": float(Decimal(row["unit_price"])),
         "stock_quantity": row["stock_quantity"],
     }
     item["in_stock"] = item["stock_quantity"] > 0
@@ -60,13 +60,15 @@ class CatalogDAO:
             raise ValueError("search text is required")
         # Escape LIKE wildcards so "%" or "_" typed by a user are literal.
         safe = text.lower().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        # Item codes are numbers; -1 matches nothing when the text isn't a code.
+        code = int(text) if text.isdigit() else -1
         rows = self._query(
-            "SELECT item_id, name, category, price, stock_quantity FROM inventory_records "
+            "SELECT item_id, name, category, unit_price, stock_quantity FROM inventory "
             "WHERE LOWER(name) LIKE %s OR item_id = %s "
             "ORDER BY CASE WHEN item_id = %s THEN 0 "
             "              WHEN LOWER(name) LIKE %s THEN 1 ELSE 2 END, name "
             "LIMIT %s",
-            (f"%{safe}%", text, text, f"{safe}%", int(limit)),
+            (f"%{safe}%", code, code, f"{safe}%", int(limit)),
         )
         return [_item_json(r) for r in rows]
 
@@ -76,7 +78,7 @@ class CatalogDAO:
         rows = self._query(
             "SELECT category, COUNT(*) AS item_count, "
             "SUM(stock_quantity > 0) AS in_stock_count "
-            "FROM inventory_records GROUP BY category ORDER BY category")
+            "FROM inventory GROUP BY category ORDER BY category")
         return [{"category": r["category"], "item_count": int(r["item_count"]),
                  "in_stock_count": int(r["in_stock_count"] or 0)} for r in rows]
 
@@ -84,14 +86,14 @@ class CatalogDAO:
         """Items in one category, A-Z. Accepts messy input like 'Books!'."""
         clean = normalize_category(category)
         rows = self._query(
-            "SELECT item_id, name, category, price, stock_quantity FROM inventory_records "
+            "SELECT item_id, name, category, unit_price, stock_quantity FROM inventory "
             "WHERE category = %s ORDER BY name", (clean,))
         return [_item_json(r) for r in rows]
 
     def grouped_catalog(self):
         """Whole catalog grouped by category: {"books": [...], "drinks": [...]}."""
         rows = self._query(
-            "SELECT item_id, name, category, price, stock_quantity FROM inventory_records "
+            "SELECT item_id, name, category, unit_price, stock_quantity FROM inventory "
             "ORDER BY category, name")
         groups = {}
         for r in rows:
@@ -110,12 +112,12 @@ class CatalogDAO:
         changes = {}
         try:
             conn.start_transaction()
-            cursor.execute("SELECT DISTINCT category FROM inventory_records")
+            cursor.execute("SELECT DISTINCT category FROM inventory")
             for (old,) in cursor.fetchall():
                 new = normalize_category(old) or "uncategorized"
                 if new != old:
                     changes[old] = new
-                    cursor.execute("UPDATE inventory_records SET category = %s WHERE category = %s",
+                    cursor.execute("UPDATE inventory SET category = %s WHERE category = %s",
                                    (new, old))
             cursor.execute("SELECT category FROM tax_exempt_categories")
             for (old,) in cursor.fetchall():

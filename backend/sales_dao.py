@@ -31,14 +31,14 @@ def _money(value):
 
 class SalesDAO:
     def __init__(self, inventory_dao):
-        # Reuse the connection pool from MySQLInventoryDAO (mysql_dao.py).
+        # InventoryModel from mysql_dao.py (Giorgiana's DAO) gives us connections.
         self.inventory_dao = inventory_dao
 
     # ---------- save sale + subtract inventory ----------
     def record_sale(self, items, payment_method, cash_received=None, card_number=None):
         """Save a paid sale and subtract its items from stock.
 
-        items: list of {"item_id": "1001", "quantity": 2}
+        items: list of {"item_id": 1001, "quantity": 2}  (item_id may also be "1001")
         payment_method: "cash" or "card"
         cash_received: required for cash; must cover the total.
         card_number: required for card; checked by card_payment.authorize_card.
@@ -57,9 +57,9 @@ class SalesDAO:
             ids = sorted(cart)
             placeholders = ", ".join(["%s"] * len(ids))
             cursor.execute(
-                f"SELECT i.item_id, i.name, i.price, i.stock_quantity, "
+                f"SELECT i.item_id, i.name, i.unit_price, i.stock_quantity, "
                 f"{EFFECTIVE_TAX_RATE_SQL} AS tax_rate "
-                f"FROM inventory_records i "
+                f"FROM inventory i "
                 f"LEFT JOIN tax_exempt_categories tec ON tec.category = i.category "
                 f"WHERE i.item_id IN ({placeholders}) "
                 f"ORDER BY i.item_id FOR UPDATE",
@@ -69,7 +69,7 @@ class SalesDAO:
 
             missing = [i for i in ids if i not in rows]
             if missing:
-                raise SaleError(f"Unknown item code(s): {', '.join(missing)}", 404)
+                raise SaleError(f"Unknown item code(s): {', '.join(map(str, missing))}", 404)
 
             lines, subtotal, tax = [], Decimal("0"), Decimal("0")
             for item_id in ids:
@@ -78,7 +78,7 @@ class SalesDAO:
                     raise SaleError(
                         f"Not enough stock for {row['name']} "
                         f"(have {row['stock_quantity']}, need {qty})", 409)
-                price = Decimal(row["price"])
+                price = Decimal(row["unit_price"])
                 rate = Decimal(row["tax_rate"])
                 line_total = _money(price * qty)
                 subtotal += line_total
@@ -126,7 +126,7 @@ class SalesDAO:
                      line["quantity"], line["tax_rate"], line["line_total"]),
                 )
                 cursor.execute(
-                    "UPDATE inventory_records SET stock_quantity = stock_quantity - %s WHERE item_id = %s",
+                    "UPDATE inventory SET stock_quantity = stock_quantity - %s WHERE item_id = %s",
                     (line["quantity"], line["item_id"]),
                 )
 
@@ -162,8 +162,8 @@ class SalesDAO:
     def get_inventory_levels(self, category=None, low_stock_only=False,
                              low_stock_threshold=LOW_STOCK_DEFAULT):
         """List items with stock and a low-stock flag, sorted lowest stock first."""
-        query = ("SELECT item_id, name, category, price AS unit_price, stock_quantity "
-                 "FROM inventory_records")
+        query = ("SELECT item_id, name, category, unit_price, stock_quantity "
+                 "FROM inventory")
         conditions, params = [], []
         if category:
             conditions.append("category = %s")
@@ -201,9 +201,21 @@ class SalesDAO:
             qty = entry.get("quantity", 1)
             if not isinstance(qty, int) or isinstance(qty, bool) or qty < 1:
                 raise SaleError("quantity must be a whole number of at least 1")
-            item_id = str(entry["item_id"]).strip()
+            item_id = _to_item_id(entry["item_id"])
+            if item_id is None:
+                raise SaleError("item_id must be a whole number, e.g. 1001")
             cart[item_id] = cart.get(item_id, 0) + qty
         return cart
+
+
+def _to_item_id(value):
+    """Item codes are numbers in the inventory table. Accept 1001 or "1001"."""
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
+        return value
+    text = str(value).strip()
+    return int(text) if text.isdigit() else None
 
 
 def _to_json(value):

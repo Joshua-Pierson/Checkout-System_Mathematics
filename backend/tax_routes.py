@@ -1,6 +1,6 @@
 """Manager API for tax-exempt settings.
 
-PUT /api/items/<item_id>/tax-exempt        body: {"tax_exempt": true}
+PUT /api/items/<item_id>/tax-exempt        (item_id is a number) body: {"tax_exempt": true}
 PUT /api/categories/<category>/tax-exempt  body: {"tax_exempt": true}
 GET /api/tax-exemptions                    -> {"categories": [...], "items": [...]}
 """
@@ -26,7 +26,7 @@ def _read_flag():
     return flag
 
 
-@tax_bp.route("/api/items/<item_id>/tax-exempt", methods=["PUT"])
+@tax_bp.route("/api/items/<int:item_id>/tax-exempt", methods=["PUT"])
 def set_item_exempt(item_id):
     flag = _read_flag()
     if flag is None:
