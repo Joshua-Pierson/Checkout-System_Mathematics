@@ -4,6 +4,10 @@ from inventory_model import InventoryModel
 from mysql_dao import MySQLInventoryDAO
 from sales_dao import SalesDAO
 from sales_routes import init_sales_routes
+from tax_dao import TaxDAO
+from tax_routes import init_tax_routes
+from catalog_dao import CatalogDAO
+from catalog_routes import init_catalog_routes
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})  # Neutralizes Cross-Origin Resource Sharing strictures
@@ -19,7 +23,12 @@ def get_inventory():
     return {"status": "success", "data": []}
 
 # Sales + inventory levels (MySQL): /api/sales, /api/sales/<id>, /api/inventory/levels
-init_sales_routes(app, SalesDAO(MySQLInventoryDAO()))
+inventory_dao = MySQLInventoryDAO()
+init_sales_routes(app, SalesDAO(inventory_dao))
+# Tax-exempt settings: /api/items/<id>/tax-exempt, /api/categories/<name>/tax-exempt, /api/tax-exemptions
+init_tax_routes(app, TaxDAO(inventory_dao))
+# Search, browse, grouping: /api/items/search, /api/categories, /api/catalog/grouped
+init_catalog_routes(app, CatalogDAO(inventory_dao))
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

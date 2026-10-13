@@ -10,6 +10,9 @@ so either both happen or neither does (no half-finished sales).
 """
 from decimal import Decimal, ROUND_HALF_UP
 
+from card_payment import CardDeclined, authorize_card
+from tax_dao import EFFECTIVE_TAX_RATE_SQL
+
 CENT = Decimal("0.01")
 LOW_STOCK_DEFAULT = 5
 
@@ -32,12 +35,13 @@ class SalesDAO:
         self.inventory_dao = inventory_dao
 
     # ---------- save sale + subtract inventory ----------
-    def record_sale(self, items, payment_method, cash_received=None):
+    def record_sale(self, items, payment_method, cash_received=None, card_number=None):
         """Save a paid sale and subtract its items from stock.
 
         items: list of {"item_id": "1001", "quantity": 2}
         payment_method: "cash" or "card"
         cash_received: required for cash; must cover the total.
+        card_number: required for card; checked by card_payment.authorize_card.
         Prices and tax always come from the database, never from the browser.
         """
         cart = self._merge_cart(items)
@@ -53,9 +57,12 @@ class SalesDAO:
             ids = sorted(cart)
             placeholders = ", ".join(["%s"] * len(ids))
             cursor.execute(
-                f"SELECT item_id, name, price, stock_quantity, tax_rate "
-                f"FROM inventory_records WHERE item_id IN ({placeholders}) "
-                f"ORDER BY item_id FOR UPDATE",
+                f"SELECT i.item_id, i.name, i.price, i.stock_quantity, "
+                f"{EFFECTIVE_TAX_RATE_SQL} AS tax_rate "
+                f"FROM inventory_records i "
+                f"LEFT JOIN tax_exempt_categories tec ON tec.category = i.category "
+                f"WHERE i.item_id IN ({placeholders}) "
+                f"ORDER BY i.item_id FOR UPDATE",
                 ids,
             )
             rows = {row["item_id"]: row for row in cursor.fetchall()}
@@ -87,17 +94,27 @@ class SalesDAO:
             if payment_method == "cash":
                 if cash_received is None:
                     raise SaleError("cash_received is required for cash payments")
-                paid = _money(cash_received)
+                try:
+                    paid = _money(cash_received)
+                except Exception:
+                    raise SaleError("cash_received must be a number")
                 if paid < total:
                     raise SaleError(f"Not enough cash: total is {total}, received {paid}")
-            else:
-                paid = total  # card: simulated approval for the exact total
+            card_last4 = None
+            if payment_method == "card":
+                try:
+                    card_last4 = authorize_card(card_number)
+                except ValueError as err:
+                    raise SaleError(str(err))
+                except CardDeclined as err:
+                    raise SaleError(str(err), 402)
+                paid = total  # card is charged the exact total
             change = paid - total
 
             cursor.execute(
-                "INSERT INTO sales (payment_method, subtotal, tax, total, amount_paid, change_due) "
-                "VALUES (%s, %s, %s, %s, %s, %s)",
-                (payment_method, subtotal, tax, total, paid, change),
+                "INSERT INTO sales (payment_method, subtotal, tax, total, amount_paid, change_due, card_last4) "
+                "VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                (payment_method, subtotal, tax, total, paid, change, card_last4),
             )
             sale_id = cursor.lastrowid
 
