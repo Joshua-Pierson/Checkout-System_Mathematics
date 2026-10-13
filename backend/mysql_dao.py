@@ -1,99 +1,111 @@
 import os
+import mysql.connector
 from dotenv import load_dotenv
-from mysql.connector import pooling
-from mysql.connector.pooling import PooledMySQLConnection
 
 # Explicitly load your environment variables before the class initializes
 load_dotenv("backend/db_access.env")
 
+class InventoryModel:
+    # Immutable whitelist establishing the canonical taxonomy
+    AUTHORIZED_CATEGORIES = frozenset([
+        "snacks", "drinks", "stationery", "exam supplies", 
+        "art supplies", "apparel", "course supplies", "BOOKS!"
+    ])
 
-class MySQLInventoryDAO:
     def __init__(self):
-        self.connection_pool = pooling.MySQLConnectionPool(
-            pool_name="inventory_pool",
-            pool_size=5,
-            pool_reset_session=True,
-            host=os.getenv("DB_HOST", "127.0.0.1"),
-            port=3307,
-            database=os.getenv("DB_NAME", "pos_inventory"),
-            user=os.getenv("DB_USER", "root"),
-            password=os.getenv("DB_PASSWORD", ""),
+        self.host = os.environ.get('DB_HOST', 'db')
+        self.user = os.environ.get('DB_USER', 'root')
+        self.password = os.environ.get('DB_PASSWORD', 'rootpassword')
+        self.database = os.environ.get('DB_NAME', 'pos_inventory')
+
+    def get_connection(self):
+        return mysql.connector.connect(
+            host=self.host,
+            user=self.user,
+            password=self.password,
+            database=self.database
         )
 
-    def get_connection(self) -> PooledMySQLConnection:
-        return self.connection_pool.get_connection()
+    def _validate_category(self, category):
+        """Intercepts unauthorized category strings before database execution."""
+        if category not in self.AUTHORIZED_CATEGORIES:
+            raise ValueError(
+                f"Taxonomy Violation: '{category}' is not an authorized category. "
+                f"Must be one of: {', '.join(self.AUTHORIZED_CATEGORIES)}"
+            )
 
-    def get_item(self, item_id: str):
-        conn = self.get_connection()
-        cursor = conn.cursor(dictionary=True)
+    def add_item(self, data):
+        """Validates payload and executes SQL INSERT."""
+        self._validate_category(data.get('category'))
+        
+        query = """
+            INSERT INTO inventory (name, unit_price, category, stock_quantity, tax_rate)
+            VALUES (%s, %s, %s, %s, %s)
+        """
+        values = (
+            data['name'], data['unit_price'], data['category'],
+            data.get('stock_quantity', 0), data['tax_rate']
+        )
+        
         try:
-            query = "SELECT * FROM inventory_records WHERE item_id = %s"
-            cursor.execute(query, (item_id,))
-            return cursor.fetchone()
-        finally:
-            cursor.close()
-            conn.close()
-
-    def update_stock(self, item_id: str, quantity: int):
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        try:
-            query = "UPDATE inventory_records SET stock_quantity = stock_quantity - %s WHERE item_id = %s"
-            cursor.execute(query, (quantity, item_id))
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute(query, values)
             conn.commit()
+            return cursor.lastrowid
         finally:
-            cursor.close()
-            conn.close()
+            if 'cursor' in locals(): cursor.close()
+            if 'conn' in locals() and conn.is_connected(): conn.close()
 
-    def add_item(
-        self, item_id: str, name: str, category: str, price: float, stock_quantity: int
-    ):
-        conn = self.get_connection()
-        cursor = conn.cursor()
+    def update_item(self, item_id, data):
+        """Validates payload if category is being updated, then executes SQL UPDATE."""
+        if 'category' in data:
+            self._validate_category(data['category'])
+
+        # Dynamically construct the UPDATE query based on provided keys
+        update_fields = []
+        values = []
+        for key in ['name', 'unit_price', 'category', 'stock_quantity', 'tax_rate']:
+            if key in data:
+                update_fields.append(f"{key} = %s")
+                values.append(data[key])
+                
+        if not update_fields:
+            return False
+
+        query = f"UPDATE inventory SET {', '.join(update_fields)} WHERE item_id = %s"
+        values.append(item_id)
+
         try:
-            query = """
-                INSERT INTO inventory_records (item_id, name, category, price, stock_quantity)
-                VALUES (%s, %s, %s, %s, %s)
-            """
-            cursor.execute(query, (item_id, name, category, price, stock_quantity))
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute(query, tuple(values))
             conn.commit()
+            return cursor.rowcount > 0
         finally:
-            cursor.close()
-            conn.close()
+            if 'cursor' in locals(): cursor.close()
+            if 'conn' in locals() and conn.is_connected(): conn.close()
 
-    def update_item(
-        self, item_id: str, name: str, category: str, price: float, stock_quantity: int
-    ):
-        conn = self.get_connection()
-        cursor = conn.cursor()
+    def delete_item(self, item_id):
+        """Executes SQL DELETE."""
         try:
-            query = """
-                UPDATE inventory_records 
-                SET name = %s, category = %s, price = %s, stock_quantity = %s 
-                WHERE item_id = %s
-            """
-            cursor.execute(query, (name, category, price, stock_quantity, item_id))
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM inventory WHERE item_id = %s", (item_id,))
             conn.commit()
+            return cursor.rowcount > 0
         finally:
-            cursor.close()
-            conn.close()
-
-    def delete_item(self, item_id: str):
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        try:
-            query = "DELETE FROM inventory_records WHERE item_id = %s"
-            cursor.execute(query, (item_id,))
-            conn.commit()
-        finally:
-            cursor.close()
-            conn.close()
-
+            if 'cursor' in locals(): cursor.close()
+            if 'conn' in locals() and conn.is_connected(): conn.close()
 
 if __name__ == "__main__":
-    dao = MySQLInventoryDAO()
-    connection = dao.get_connection()
-    print(
-        "Database connection pool established successfully:", connection.is_connected()
-    )
-    connection.close()
+    # Test script updated to verify the correct unified class
+    dao = InventoryModel()
+    try:
+        connection = dao.get_connection()
+        print("Database connection established successfully:", connection.is_connected())
+    except Exception as e:
+        print("Database connection failed:", str(e))
+    finally:
+        if 'connection' in locals() and connection.is_connected():
+            connection.close()
