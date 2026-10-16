@@ -1,7 +1,7 @@
 """Old entry point, kept so `python backend/server.py` still works.
 
 The app now lives in main.py (that is what Docker runs: FLASK_APP=main.py),
-and main.py registers every route, including sales, tax and catalog.
+and main.py registers the routes.
 """
 from main import app
 
