@@ -240,27 +240,5 @@ def delete_item_route(item_id):
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-# ==========================================
-# SALES, TAX-EXEMPT, CATALOG SEARCH/BROWSE (Henry)
-# ==========================================
-# Routes live in their own files; they share the same InventoryModel (dao).
-#   sales_routes.py   -> /api/sales, /api/sales/<id>, /api/inventory/levels
-#   tax_routes.py     -> /api/items/<id>/tax-exempt, /api/categories/<name>/tax-exempt,
-#                        /api/tax-exemptions
-#   catalog_routes.py -> /api/items/search, /api/categories/summary,
-#                        /api/categories/<name>/items, /api/catalog/grouped,
-#                        /api/categories/normalize
-from sales_dao import SalesDAO  # noqa: E402
-from sales_routes import init_sales_routes  # noqa: E402
-from tax_dao import TaxDAO  # noqa: E402
-from tax_routes import init_tax_routes  # noqa: E402
-from catalog_dao import CatalogDAO  # noqa: E402
-from catalog_routes import init_catalog_routes  # noqa: E402
-
-init_sales_routes(app, SalesDAO(dao))
-init_tax_routes(app, TaxDAO(dao))
-init_catalog_routes(app, CatalogDAO(dao))
-
-
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)

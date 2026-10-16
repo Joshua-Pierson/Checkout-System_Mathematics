@@ -1,9 +1,7 @@
 """Tests for search, browse categories, and category grouping."""
 import pytest
-from flask import Flask
 
 from catalog_dao import CatalogDAO, normalize_category
-from catalog_routes import init_catalog_routes
 from tax_dao import TaxDAO
 
 EXTRA = [  # messy categories on purpose, like the real items.csv ("BOOKS!")
@@ -82,18 +80,3 @@ def test_normalize_keeps_tax_exempt_setting(catalog, inventory_dao):
     catalog.normalize_all_categories()
     assert TaxDAO(inventory_dao).list_exemptions()["categories"] == ["books"]
 
-
-# ---------- API ----------
-def test_catalog_api(catalog):
-    app = Flask(__name__)
-    init_catalog_routes(app, catalog)
-    c = app.test_client()
-    assert c.get("/api/items/search?q=drink").get_json()["data"][0]["item_id"] == 1004
-    assert c.get("/api/items/search?q=").status_code == 400
-    assert c.get("/api/items/search?q=" + "x" * 101).status_code == 400
-    r = c.post("/api/categories/normalize")
-    assert r.status_code == 200 and r.get_json()["data"]["renamed"]["BOOKS!"] == "books"
-    assert c.get("/api/categories/summary").status_code == 200
-    assert c.get("/api/categories/drinks/items").status_code == 200
-    assert c.get("/api/categories/spaceships/items").status_code == 404
-    assert "books" in c.get("/api/catalog/grouped").get_json()["data"]
