@@ -21,7 +21,18 @@ function groupItemsByCategory(inventoryArray) {
         return groupedData;
     }, {});
 }
-
+async function handleAddItem(itemData) {
+    const result = await createItem(itemData);
+    console.log(result);
+}
+async function handleEditItem(itemId, updatedData) {
+    const result = await updateItem(itemId, updatedData);
+    console.log(result);
+}
+async function handleDeleteItem(itemId) {
+    const result = await deleteItem(itemId);
+    console.log(result);
+}
 // Example execution to verify logic:
 // const catalogData = await fetchInventory(); 
 // const categorizedCatalog = groupItemsByCategory(catalogData);
