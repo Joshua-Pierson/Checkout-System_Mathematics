@@ -1,21 +1,27 @@
 import { useState } from 'react';
 import CatalogForm from './manager/CatalogForm.jsx';
 
-export default function ManagerCatalog({ onStudent, onPage, onSaved }) {
-  const [page, setPage] = useState('');
-  function navigate(event, destination) { event.preventDefault(); setPage(destination); onPage(Boolean(destination)); }
-  if (!page) return <>
-    <h2 id="manager-heading">Manager View</h2>
-    <p><a href="#manager-menu" onClick={(event) => navigate(event, 'menu')}>Go to Manager Menu</a></p>
-  </>;
-  if (page !== 'menu') return <CatalogForm onSaved={onSaved} key={page} action={page} onBack={(event) => navigate(event, 'menu')} />;
+const actions = [
+  { value: 'add', label: 'Add to Catalog' },
+  { value: 'edit', label: 'Edit Catalog' },
+  { value: 'remove', label: 'Remove From Catalog' },
+];
+
+export default function ManagerCatalog({ onStudent, onSaved }) {
+  const [action, setAction] = useState('add');
+  const [saving, setSaving] = useState(false);
   return <>
-    <h1 style={{ color: 'rgb(255, 255, 255)' }}>Catalog Management</h1>
-    <header><nav><ul>
-      <li><a href="#manager-add" onClick={(event) => navigate(event, 'add')}>Add to Catalog</a></li>
-      <li><a href="#manager-edit" onClick={(event) => navigate(event, 'edit')}>Edit Catalog</a></li>
-      <li><a href="#manager-remove" onClick={(event) => navigate(event, 'remove')}>Remove From Catalog</a></li>
-      <li><a href="#student" onClick={(event) => { event.preventDefault(); setPage(''); onStudent(); }}>Go Back to Student View</a></li>
-    </ul></nav></header>
+    <p className="eyebrow">MANAGER WORKSPACE</p>
+    <h1 id="manager-heading">Catalog Management</h1>
+    <p>Add products, update catalog details, or remove an item.</p>
+    <div className="manager-actions" role="group" aria-label="Catalog action">
+      {actions.map((entry) => <button key={entry.value} type="button"
+        aria-pressed={action === entry.value} disabled={saving}
+        onClick={() => setAction(entry.value)}>{entry.label}</button>)}
+    </div>
+    <div className="manager-form-panel">
+      <CatalogForm key={action} action={action} onSaved={onSaved} embedded onBusyChange={setSaving} />
+    </div>
+    <button className="manager-student-return" type="button" disabled={saving} onClick={onStudent}>Back to Student View</button>
   </>;
 }

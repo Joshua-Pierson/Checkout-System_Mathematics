@@ -17,12 +17,12 @@ export default function CheckoutReceipt({ cart, totalsReady, busy, setBusy, stud
   }
   function cancel() { setResult(null); setMessage('Checkout summary canceled. Your cart is unchanged.'); }
   return <>
-    <h3>Checkout</h3>
-    <p>The current backend calculates a pending summary only. Payment processing, sale recording, and stock updates are not connected.</p>
-    <button type="button" disabled={busy || !cart.length || !totalsReady} onClick={submit}>Get Checkout Summary</button>{' '}
-    <button type="button" disabled={busy} onClick={cancel}>Cancel Checkout</button>
+    <h3 className="sr-only">Checkout</h3>
+    <p className="checkout-note">Summary preview only. Payments and completed sales are not enabled.</p>
+    <button className="checkout-button" type="button" disabled={busy || !cart.length || !totalsReady} onClick={submit}>Get checkout summary <span aria-hidden="true">→</span></button>{' '}
+    <button className="cancel-checkout" type="button" disabled={busy || !result} onClick={cancel}>Cancel Checkout</button>
     <p id="checkout-message" role="status" aria-live="polite">{message}</p>
-    <h3>Receipt</h3>
+    <h3 className="receipt-heading">Receipt</h3>
     <div id="receipt-output">{result ? <>
       <p>Pending checkout summary — not a payment receipt</p>
       <p>Transaction: {result.transaction_id}</p>
@@ -34,4 +34,3 @@ export default function CheckoutReceipt({ cart, totalsReady, busy, setBusy, stud
     </> : 'No receipt generated yet.'}</div>
   </>;
 }
-

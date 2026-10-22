@@ -11,7 +11,7 @@ const fields = [
 ];
 const titles = { add: 'Add to Catalog', edit: 'Edit Catalog', remove: 'Remove From Catalog' };
 
-export default function CatalogForm({ action, onBack, onSaved }) {
+export default function CatalogForm({ action, onBack, onSaved, embedded = false, onBusyChange }) {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -37,18 +37,18 @@ export default function CatalogForm({ action, onBack, onSaved }) {
       !Number.isSafeInteger(item.stock_quantity) || item.stock_quantity < 0 || !Number.isFinite(item.tax_rate) || item.tax_rate < 0 || item.tax_rate > 1)) {
       setMessage('Enter a name, category, valid price, whole-number stock, and tax rate between 0 and 1.'); return;
     }
-    setBusy(true); setMessage('Saving...');
+    setBusy(true); onBusyChange?.(true); setMessage('Saving...');
     try {
       const result = action === 'add' ? await createItem(item) : action === 'edit' ? await updateItem(id, item) : await deleteItem(id);
       setMessage(action === 'add' ? `Item created. Assigned ID: ${result.item_id}.` : result.message);
       form.reset(); onSaved();
     } catch (error) { setMessage(error.message); }
-    finally { setBusy(false); }
+    finally { setBusy(false); onBusyChange?.(false); }
   }
   const visible = action === 'remove' ? fields.slice(0, 1) : action === 'add' ? fields.slice(1) : fields;
   return <>
-    <h1 style={{ color: 'rgb(255, 255, 255)' }}>{titles[action]}</h1>
-    <nav><ul><li><a href="#manager-menu" onClick={(event) => { if (busy) event.preventDefault(); else onBack(event); }}>Go Back</a></li></ul></nav>
+    <h2 id="catalog-form-heading">{titles[action]}</h2>
+    {!embedded && <nav><ul><li><a href="#manager-menu" onClick={(event) => { if (busy) event.preventDefault(); else onBack(event); }}>Go Back</a></li></ul></nav>}
     {action === 'add' && <p>The database assigns the item ID.</p>}
     {action !== 'remove' && <p>Use an existing category. Tax rate example: 0.0825 for 8.25%, or 0 for exempt.</p>}
     <form id={`${action}Form`} onSubmit={submit}>

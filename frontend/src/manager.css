@@ -1,12 +1,24 @@
-/* Only the existing rules from frontend/manager/style/layout.css. */
-body.original-manager-page {
-  background-color: darkslategray;
-  text-align: center;
-}
-body.original-manager-page button {
-  padding: 15px;
-  margin: 5px;
-}
-body.original-manager-page a {
-  color: aliceblue;
-}
+/* The manager screens share the green-and-white theme. */
+section[aria-labelledby='manager-heading'] { max-width: 850px; margin: 36px auto; background: white; padding: 32px; border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 4px 18px #20442a03; }
+section[aria-labelledby='manager-heading'] h1 { color: #17452e; font-size: 29px; letter-spacing: -1px; margin-bottom: 18px; }
+section[aria-labelledby='manager-heading'] h2 { margin-bottom: 18px; }
+section[aria-labelledby='manager-heading'] p { color: #647760; font-size: 13px; line-height: 1.8; margin: 14px 0; }
+section[aria-labelledby='manager-heading'] nav ul { list-style: none; padding: 0; margin: 20px 0; display: grid; gap: 12px; }
+section[aria-labelledby='manager-heading'] nav a, a[href='#manager-menu'] { display: block; padding: 17px 20px; background: #f0f6eb; border: 1px solid #dfebd8; border-radius: 9px; text-decoration: none; color: #255b36; font-size: 13px; font-weight: 700; }
+section[aria-labelledby='manager-heading'] nav a:hover, a[href='#manager-menu']:hover { background: #e4efda; }
+section[aria-labelledby='manager-heading'] form { margin-top: 25px; }
+section[aria-labelledby='manager-heading'] form fieldset { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; }
+section[aria-labelledby='manager-heading'] form fieldset > span { display: block; min-width: 0; }
+section[aria-labelledby='manager-heading'] form br { display: none; }
+section[aria-labelledby='manager-heading'] input[type='submit'] { justify-self: start; grid-column: 1 / -1; margin-top: 3px; }
+section[aria-labelledby='manager-heading'] [role='status']:not(:empty) { padding: 12px 15px; background: #f0f5e9; border: 1px solid #dce8d3; border-radius: 8px; }
+@media (max-width: 600px) { section[aria-labelledby='manager-heading'] { padding: 22px; margin: 25px 0; } section[aria-labelledby='manager-heading'] form fieldset { grid-template-columns: 1fr; gap: 18px; } }
+
+.manager-actions { display: flex; flex-wrap: wrap; gap: 9px; margin: 25px 0; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+.manager-actions button { background: #f3f7ef; color: #3a6646; border-color: #dce7d5; font-size: 12px; }
+.manager-actions button[aria-pressed='true'] { background: var(--green); color: white; border-color: var(--green); }
+.manager-actions button:hover:not(:disabled) { background: #e1eed9; color: #19462d; border-color: #c0d7b7; }
+.manager-actions button[aria-pressed='true']:hover:not(:disabled) { background: var(--green-dark); color: white; }
+.manager-form-panel { padding-top: 4px; }
+.manager-student-return { margin-top: 28px; background: white; color: var(--green); border-color: #ccdcca; font-size: 12px; }
+@media (max-width: 600px) { .manager-actions { flex-direction: column; } .manager-actions button { text-align: left; } }

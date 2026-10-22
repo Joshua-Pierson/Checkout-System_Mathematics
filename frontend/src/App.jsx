@@ -36,17 +36,17 @@ export default function App() {
     return () => controller.abort();
   }, [inventoryVersion]);
 
-  useEffect(() => {
-    document.body.classList.toggle('original-manager-page', view === 'manager-page');
-    return () => document.body.classList.remove('original-manager-page');
-  }, [view]);
-
-  return <>
-    {view !== 'manager-page' && <h1>Checkout System</h1>}
-    {view !== 'manager-page' && <nav aria-label="Choose view">
-      <button type="button" aria-pressed={view === 'student'} onClick={() => setView('student')}>Student</button>
-      <button type="button" aria-pressed={view === 'manager'} onClick={() => setView('manager')}>Manager</button>
-    </nav>}
+  return <div className="app-shell">
+    <header className="app-header">
+      <a className="brand" href="#" onClick={(event) => { event.preventDefault(); setView('student'); }} aria-label="Checkout System home">
+        <span className="brand-mark" aria-hidden="true">C<span>✓</span></span>
+        <span>Campus<span className="brand-subtitle">CHECKOUT SYSTEM</span></span>
+      </a>
+      <nav className="view-switch" aria-label="Choose view">
+        <button type="button" aria-pressed={view === 'student'} onClick={() => setView('student')}>Student</button>
+        <button type="button" aria-pressed={view !== 'student'} onClick={() => setView('manager')}>Manager</button>
+      </nav>
+    </header>
     <main>
       <section hidden={view !== 'student'} aria-labelledby="cart-heading">
         <StudentCart {...inventory} cart={transaction.cart} message={transaction.message}
@@ -56,5 +56,6 @@ export default function App() {
         {view !== 'student' && <ManagerCatalog onSaved={() => { dispatch({ type: 'cancel' }); setInventoryVersion((version) => version + 1); }} onStudent={() => setView('student')} onPage={(isPage) => setView(isPage ? 'manager-page' : 'manager')} />}
       </section>
     </main>
-  </>;
+    <footer className="app-footer">Campus Checkout <span>Find your essentials. Make them yours.</span></footer>
+  </div>;
 }
