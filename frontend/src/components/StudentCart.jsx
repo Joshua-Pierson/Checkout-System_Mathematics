@@ -5,6 +5,7 @@ import { calculateCart } from '../api.js';
 
 export default function StudentCart({ catalog, status, error, cart, message, dispatch, active }) {
   const [busy, setBusy] = useState(false);
+  const [studentId, setStudentId] = useState('');
   const [totals, setTotals] = useState({ cart: null, status: 'idle' });
   useEffect(() => {
     if (!cart.length) { setTotals({ cart, status: 'ready', subtotal: 0, tax: 0, total: 0 }); return; }
@@ -40,11 +41,18 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
     codeInput.current?.focus();
   }
   function cancel() {
-    dispatch({ type: 'cancel' }); setCode(''); setCategory(''); setQuery(''); codeInput.current?.focus();
+    dispatch({ type: 'cancel' }); setCode(''); setCategory(''); setQuery(''); setStudentId(''); codeInput.current?.focus();
   }
   return <>
     <fieldset disabled={busy}>
     <h2 id="cart-heading">Student Cart</h2>
+    <label htmlFor="student-id">Student ID (optional)</label>{' '}
+    <input id="student-id" name="student_id" type="text" value={studentId}
+      onChange={(event) => setStudentId(event.target.value)} autoComplete="off"
+      placeholder="Enter your student ID" aria-describedby="student-id-status" />
+    <p id="student-id-status" role="status" aria-live="polite">
+      {studentId.trim() ? 'Student ID entered. Not verified against student records.' : 'No Student ID entered. Continue as a guest.'}
+    </p>
     <h3>Available Products</h3>
     <label htmlFor="category-filter">Browse by category</label>{' '}
     <select id="category-filter" value={category} disabled={!ready} onChange={(event) => setCategory(event.target.value)}>
@@ -84,8 +92,8 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
       <p>Tax: ${Number(totals.tax).toFixed(2)}</p>
       <p>Cart total: ${Number(totals.total).toFixed(2)}</p>
     </> : <p>{totals.cart === cart && totals.status === 'error' ? totals.error : 'Calculating total...'}</p>}</div>
-    <CheckoutReceipt key={JSON.stringify(cart)} cart={cart} totalsReady={totalsReady} busy={busy} setBusy={setBusy} />
-    <button id="cancel-transaction" type="button" disabled={!cart.length} onClick={cancel}>Cancel Transaction</button>
+    <CheckoutReceipt key={JSON.stringify([cart, studentId.trim()])} studentId={studentId.trim()} cart={cart} totalsReady={totalsReady} busy={busy} setBusy={setBusy} />
+    <button id="cancel-transaction" type="button" disabled={!cart.length && !studentId} onClick={cancel}>Cancel Transaction</button>
     </fieldset>
   </>;
 }

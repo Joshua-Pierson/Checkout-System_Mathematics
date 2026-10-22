@@ -31,4 +31,6 @@ export const updateItem = (id, item) => request(`/api/items/${id}`, { method: 'P
 export const deleteItem = (id) => request(`/api/items/${id}`, { method: 'DELETE' });
 const cartPayload = (cart) => ({ items: cart.map((item) => ({ item_id: Number(item.code), quantity: item.quantity })) });
 export const calculateCart = (cart, signal) => request('/api/cart/calculate', { method: 'POST', body: cartPayload(cart), signal });
-export const checkout = (cart) => request('/api/checkout', { method: 'POST', body: cartPayload(cart) });
+export const checkout = (cart, studentId = '') => request('/api/checkout', {
+  method: 'POST', body: { ...cartPayload(cart), student_id: studentId.trim() },
+});
