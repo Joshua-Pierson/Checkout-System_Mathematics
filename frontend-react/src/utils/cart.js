@@ -19,7 +19,7 @@ export function prepareProduct(product) {
 }
 
 export function prepareInventory(products) {
-  if (!Array.isArray(products)) throw new Error('/api/items must return a JSON array.');
+  if (!Array.isArray(products)) throw new Error('Inventory data must be a JSON array.');
   const catalog = products.map(prepareProduct);
   if (new Set(catalog.map((item) => item.code)).size !== catalog.length) {
     throw new Error('The inventory contains duplicate item IDs.');

@@ -21,10 +21,12 @@ function transactionReducer(state, action) {
 
 export default function App() {
   const [view, setView] = useState('student');
+  const [inventoryVersion, setInventoryVersion] = useState(0);
   const [inventory, setInventory] = useState({ catalog: [], status: 'loading', error: '' });
   const [transaction, dispatch] = useReducer(transactionReducer, { cart: [], message: '' });
 
   useEffect(() => {
+    setInventory((previous) => ({ ...previous, status: 'loading', error: '' }));
     const controller = new AbortController();
     fetchInventory(controller.signal).then(prepareInventory).then((catalog) => {
       if (!controller.signal.aborted) setInventory({ catalog, status: 'ready', error: '' });
@@ -32,7 +34,7 @@ export default function App() {
       if (!controller.signal.aborted) setInventory({ catalog: [], status: 'error', error: error.message });
     });
     return () => controller.abort();
-  }, []);
+  }, [inventoryVersion]);
 
   useEffect(() => {
     document.body.classList.toggle('original-manager-page', view === 'manager-page');
@@ -51,7 +53,7 @@ export default function App() {
           dispatch={dispatch} active={view === 'student'} />
       </section>
       <section hidden={view !== 'manager' && view !== 'manager-page'} aria-labelledby="manager-heading">
-        {view !== 'student' && <ManagerCatalog onStudent={() => setView('student')} onPage={(isPage) => setView(isPage ? 'manager-page' : 'manager')} />}
+        {view !== 'student' && <ManagerCatalog onSaved={() => { dispatch({ type: 'cancel' }); setInventoryVersion((version) => version + 1); }} onStudent={() => setView('student')} onPage={(isPage) => setView(isPage ? 'manager-page' : 'manager')} />}
       </section>
     </main>
   </>;

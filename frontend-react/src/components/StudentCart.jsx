@@ -1,8 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
-import { cartTotal, money } from '../utils/cart.js';
+import { money } from '../utils/cart.js';
 import CheckoutReceipt from './CheckoutReceipt.jsx';
+import { calculateCart } from '../api.js';
 
 export default function StudentCart({ catalog, status, error, cart, message, dispatch, active }) {
+  const [busy, setBusy] = useState(false);
+  const [totals, setTotals] = useState({ cart: null, status: 'idle' });
+  useEffect(() => {
+    if (!cart.length) { setTotals({ cart, status: 'ready', subtotal: 0, tax: 0, total: 0 }); return; }
+    const controller = new AbortController();
+    setTotals({ cart, status: 'loading' });
+    calculateCart(cart, controller.signal).then((result) => {
+      if (!controller.signal.aborted) setTotals({ ...result, cart, status: 'ready' });
+    }).catch((error) => {
+      if (!controller.signal.aborted) setTotals({ cart, status: 'error', error: error.message });
+    });
+    return () => controller.abort();
+  }, [cart]);
+  const totalsReady = totals.cart === cart && totals.status === 'ready';
   const [code, setCode] = useState('');
   const [category, setCategory] = useState('');
   const [query, setQuery] = useState('');
@@ -14,7 +29,7 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
   const catalogMessage = status === 'loading' ? 'Loading products...' : status === 'error' ? error
     : !catalog.length ? 'No products are available.' : !matches.length ? 'No items match your search or selected category.'
     : `${matches.length} product${matches.length === 1 ? '' : 's'} found.`;
-  function add(itemCode) { if (ready) dispatch({ type: 'add', code: itemCode, catalog }); }
+  function add(itemCode) { if (ready && !busy) dispatch({ type: 'add', code: itemCode, catalog }); }
   function submit(event) {
     event.preventDefault();
     const itemCode = code.trim();
@@ -28,6 +43,7 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
     dispatch({ type: 'cancel' }); setCode(''); setCategory(''); setQuery(''); codeInput.current?.focus();
   }
   return <>
+    <fieldset disabled={busy}>
     <h2 id="cart-heading">Student Cart</h2>
     <h3>Available Products</h3>
     <label htmlFor="category-filter">Browse by category</label>{' '}
@@ -63,8 +79,13 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
         <button type="button" onClick={() => dispatch({ type: 'remove', code: item.code })} aria-label={`Remove ${item.name} from cart`}>Remove</button>
       </div>)}
     </div>
-    <p id="cart-total">Cart total: {money(cartTotal(cart))}</p>
-    <CheckoutReceipt />
+    <div id="cart-total" role="status" aria-live="polite">{totalsReady ? <>
+      <p>Subtotal: ${Number(totals.subtotal).toFixed(2)}</p>
+      <p>Tax: ${Number(totals.tax).toFixed(2)}</p>
+      <p>Cart total: ${Number(totals.total).toFixed(2)}</p>
+    </> : <p>{totals.cart === cart && totals.status === 'error' ? totals.error : 'Calculating total...'}</p>}</div>
+    <CheckoutReceipt key={JSON.stringify(cart)} cart={cart} totalsReady={totalsReady} busy={busy} setBusy={setBusy} />
     <button id="cancel-transaction" type="button" disabled={!cart.length} onClick={cancel}>Cancel Transaction</button>
+    </fieldset>
   </>;
 }
