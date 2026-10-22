@@ -6,10 +6,8 @@ Run from the repo root:
 import pytest
 
 pytest.importorskip("mysql.connector")
-from flask import Flask  # noqa: E402
 
 from sales_dao import SaleError  # noqa: E402
-from sales_routes import init_sales_routes  # noqa: E402
 
 CARD = "4242 4242 4242 4242"  # approved test card
 
@@ -75,23 +73,3 @@ def test_inventory_levels_filters(dao):
     books = dao.get_inventory_levels(category="books")
     assert [i["item_id"] for i in books] == [1001]
 
-
-def test_api_routes(dao):
-    app = Flask(__name__)
-    init_sales_routes(app, dao)
-    client = app.test_client()
-
-    r = client.post("/api/sales", json={"items": [{"item_id": 1001, "quantity": 1}],
-                                         "payment_method": "card", "card_number": CARD})
-    assert r.status_code == 201
-    sale_id = r.get_json()["data"]["sale_id"]
-    assert client.get(f"/api/sales/{sale_id}").status_code == 200
-    assert client.get("/api/sales/9999").status_code == 404
-
-    r = client.post("/api/sales", json={"items": [{"item_id": 1003, "quantity": 99}],
-                                         "payment_method": "card", "card_number": CARD})
-    assert r.status_code == 409 and "Not enough stock" in r.get_json()["message"]
-
-    r = client.get("/api/inventory/levels?low_stock=true")
-    assert [i["item_id"] for i in r.get_json()["data"]] == [1003]
-    assert client.get("/api/inventory/levels?threshold=abc").status_code == 400

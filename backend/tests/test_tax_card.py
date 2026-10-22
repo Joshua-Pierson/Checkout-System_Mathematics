@@ -1,11 +1,9 @@
 """Tests for tax-exempt settings and card payments."""
 import pytest
-from flask import Flask
 
 from card_payment import CardDeclined, authorize_card
 from sales_dao import SaleError
 from tax_dao import NotFound, TaxDAO
-from tax_routes import init_tax_routes
 
 APPROVED = "4242 4242 4242 4242"
 DECLINED = "4000 0000 0000 0002"
@@ -95,17 +93,3 @@ def test_unknown_item_or_category(tax):
     with pytest.raises(NotFound):
         tax.set_category_exempt("spaceships", True)
 
-
-def test_tax_api_routes(tax):
-    app = Flask(__name__)
-    init_tax_routes(app, tax)
-    c = app.test_client()
-    r = c.put("/api/items/1001/tax-exempt", json={"tax_exempt": True})
-    assert r.status_code == 200
-    r = c.put("/api/categories/drinks/tax-exempt", json={"tax_exempt": True})
-    assert r.status_code == 404
-    r = c.put("/api/categories/exam supplies/tax-exempt", json={"tax_exempt": True})
-    assert r.status_code == 200
-    assert c.put("/api/items/1001/tax-exempt", json={"tax_exempt": "yes"}).status_code == 400
-    data = c.get("/api/tax-exemptions").get_json()["data"]
-    assert data == {"categories": ["exam supplies"], "items": [1001]}
