@@ -1,15 +1,7 @@
-FROM node:20-alpine
-
+FROM node:22-alpine
 WORKDIR /app
-
-# Copies the package definitions and installs Vite
 COPY package*.json ./
-RUN npm install
-
-# Copies the rest of the frontend source code
+RUN npm ci
 COPY . .
-
 EXPOSE 3000
-
-# Binds the Vite server to 0.0.0.0 to allow external Docker network routing
-CMD ["npm", "run", "dev"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "3000"]
