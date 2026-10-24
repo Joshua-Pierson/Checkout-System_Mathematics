@@ -86,6 +86,29 @@ class InventoryModel:
             if 'cursor' in locals(): cursor.close()
             if 'conn' in locals() and conn.is_connected(): conn.close()
 
+    def decrement_stock(self, item_id, quantity):
+        """Executes an atomic decrement operation to enforce inventory constraints."""
+        if quantity < 1:
+            raise ValueError("Decrement quantity must be strictly positive.")
+
+        query = """
+            UPDATE inventory 
+            SET stock_quantity = stock_quantity - %s 
+            WHERE item_id = %s AND stock_quantity >= %s
+        """
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute(query, (quantity, item_id, quantity))
+            conn.commit()
+
+            if cursor.rowcount == 0:
+                raise ValueError(f"Transaction aborted: Insufficient stock or invalid item ID for {item_id}.")
+            return True
+        finally:
+            if 'cursor' in locals(): cursor.close()
+            if 'conn' in locals() and conn.is_connected(): conn.close()
+
     def delete_item(self, item_id):
         """Executes SQL DELETE."""
         try:

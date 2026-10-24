@@ -1,10 +1,8 @@
 services:
   backend:
-    build: 
-      context: ./backend
-      dockerfile: Dockerfile
+    build: ./backend
     ports:
-      - "5000:5000"
+      - "5001:5000"
     volumes:
       - ./backend:/app
     environment:
@@ -17,7 +15,7 @@ services:
       - DB_NAME=pos_inventory
     depends_on:
       - db
-    # Triggers the Python seed script before launching the Flask server
+    # Corrected the path to the seed script
     command: >
       bash -c "python data/seed.py && flask run --host=0.0.0.0"
 
@@ -30,21 +28,21 @@ services:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:5000
+      # Corrected the variable name and pointed it to the mapped Mac port
+      - VITE_API_BASE_URL=http://localhost:5001
     depends_on:
       - backend
 
   db:
     image: mysql:8.0
     ports:
-      - "3307:3306"
+      - "3308:3306"
     environment:
       - MYSQL_ROOT_PASSWORD=rootpassword
       - MYSQL_DATABASE=pos_inventory
     volumes:
       - mysql_data:/var/lib/mysql
-      # Projects the SQL schema into the container's native boot sequence
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
 
 volumes:
   mysql_data:

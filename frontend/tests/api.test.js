@@ -22,14 +22,17 @@ test('requests match Flask routes, payloads, response envelope, and errors', asy
     await api.deleteItem(1001);
     const cart = [{ code: '1001', quantity: 2 }];
     await api.calculateCart(cart);
-    await api.checkout(cart);
+    await api.checkout(cart, 10);
     assert.deepEqual(calls.map(({ url, method }) => [new URL(url).pathname, method]), [
       ['/api/inventory', 'GET'], ['/api/categories', 'GET'], ['/api/items', 'POST'],
       ['/api/items/1001', 'PUT'], ['/api/items/1001', 'DELETE'],
-      ['/api/cart/calculate', 'POST'], ['/api/checkout', 'POST'],
+      ['/api/cart/calculate', 'POST'], ['/api/checkout/cash', 'POST'],
     ]);
     assert.deepEqual(JSON.parse(calls[5].body), { items: [{ item_id: 1001, quantity: 2 }] });
-    assert.deepEqual(JSON.parse(calls[6].body), JSON.parse(calls[5].body));
+    assert.deepEqual(JSON.parse(calls[6].body), {
+      cart: [{ item_id: 1001, quantity: 2 }],
+      cash_tendered: 10,
+    });
     globalThis.fetch = async () => ({ ok: false, status: 500, json: async () => ({ status: 'error', message: 'Database unavailable' }) });
     await assert.rejects(api.fetchInventory(), /Database unavailable/);
     globalThis.fetch = async () => ({ ok: true, status: 200, json: async () => { throw new SyntaxError(); } });

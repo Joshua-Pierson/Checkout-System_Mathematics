@@ -9,7 +9,7 @@ async function request(path, { signal, method = 'GET', body } = {}) {
     });
   } catch (error) {
     if (error.name === 'AbortError') throw error;
-    throw new Error('Could not connect to Python. Check that the backend is running on port 5000.');
+    throw new Error('Could not connect to Python. Check that the backend is running.');
   }
   let result;
   try { result = await response.json(); }
@@ -23,14 +23,33 @@ async function request(path, { signal, method = 'GET', body } = {}) {
 export async function fetchInventory(signal) {
   return (await request('/api/inventory', { signal })).data;
 }
+
 export async function fetchCategories(signal) {
   return (await request('/api/categories', { signal })).data;
 }
+
 export const createItem = (item) => request('/api/items', { method: 'POST', body: item });
 export const updateItem = (id, item) => request(`/api/items/${id}`, { method: 'PUT', body: item });
 export const deleteItem = (id) => request(`/api/items/${id}`, { method: 'DELETE' });
+
 const cartPayload = (cart) => ({ items: cart.map((item) => ({ item_id: Number(item.code), quantity: item.quantity })) });
-export const calculateCart = (cart, signal) => request('/api/cart/calculate', { method: 'POST', body: cartPayload(cart), signal });
-export const checkout = (cart, studentId = '') => request('/api/checkout', {
-  method: 'POST', body: { ...cartPayload(cart), student_id: studentId.trim() },
+
+export const calculateCart = (cart, signal) => request('/api/cart/calculate', { 
+  method: 'POST', body: cartPayload(cart), signal 
+});
+
+export const checkout = (cart, cashTendered) => request('/api/checkout/cash', {
+  method: 'POST', 
+  body: { 
+    cart: cart.map((item) => ({ item_id: Number(item.code), quantity: item.quantity })),
+    cash_tendered: Number(cashTendered) 
+  }
+});
+
+export const checkoutCard = (cart, cardNumber) => request('/api/checkout/card', {
+  method: 'POST', 
+  body: { 
+    cart: cart.map((item) => ({ item_id: Number(item.code), quantity: item.quantity })),
+    card_number: cardNumber 
+  }
 });

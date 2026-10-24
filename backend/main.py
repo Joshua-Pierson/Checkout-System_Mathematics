@@ -1,8 +1,10 @@
 import os
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import mysql.connector
 from mysql_dao import InventoryModel
+from receipt_service import generate_receipt
+from card_payment import authorize_card, CardDeclined
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -238,6 +240,168 @@ def delete_item_route(item_id):
             )
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/checkout/cash", methods=["POST"])
+def process_cash_checkout():
+    """Handles canonical calculation, payment verification, and atomic inventory depletion."""
+    data = request.get_json()
+    if not data or "cart" not in data or "cash_tendered" not in data:
+        return jsonify({"status": "error", "message": "Malformed payload."}), 400
+
+    cart = data["cart"]
+    try:
+        cash_tendered = float(data["cash_tendered"])
+    except ValueError:
+        return jsonify({"status": "error", "message": "cash_tendered must be a numerical float."}), 400
+
+    subtotal = 0.0
+    total_tax = 0.0
+    receipt_items = [] # <-- Array to hold item metadata for the receipt generator
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        for req_item in cart:
+            item_id = req_item.get("item_id")
+            quantity = req_item.get("quantity", 1)
+
+            # Updated query to include 'name' for the receipt generator
+            cursor.execute("SELECT name, unit_price, tax_rate, stock_quantity FROM inventory WHERE item_id = %s", (item_id,))
+            db_item = cursor.fetchone()
+
+            if not db_item:
+                return jsonify({"status": "error", "message": f"Item {item_id} not found."}), 404
+            if int(db_item["stock_quantity"]) < quantity:
+                return jsonify({"status": "error", "message": f"Insufficient stock for item {item_id}."}), 409
+
+            price = float(db_item["unit_price"])
+            tax_rate = float(db_item["tax_rate"])
+
+            line_total = price * quantity
+            subtotal += line_total
+            total_tax += line_total * tax_rate
+
+            receipt_items.append({
+                "name": db_item["name"],
+                "quantity": quantity,
+                "price": price
+            })
+
+        total_due = round(subtotal + total_tax, 2)
+
+        if cash_tendered < total_due:
+            deficit = round(total_due - cash_tendered, 2)
+            return jsonify({"status": "error", "message": "Insufficient payment", "amount_due": total_due, "deficit": deficit}), 400
+
+        for req_item in cart:
+            dao.decrement_stock(req_item.get("item_id"), req_item.get("quantity", 1))
+
+        change_due = round(cash_tendered - total_due, 2)
+
+        # Generate the structured receipt dictionary
+        receipt_data = generate_receipt(
+            cart_items=receipt_items,
+            subtotal=subtotal,
+            total_tax=total_tax,
+            total_due=total_due,
+            payment_method="cash",
+            payment_details={"cash_tendered": cash_tendered, "change_due": change_due}
+        )
+
+        return jsonify({
+            "status": "success",
+            "total_due": total_due,
+            "cash_tendered": cash_tendered,
+            "change_due": change_due,
+            "receipt": receipt_data  # <-- Embed canonical receipt schema
+        }), 200
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if "cursor" in locals(): cursor.close()
+        if "conn" in locals() and conn.is_connected(): conn.close()
+
+@app.route("/api/checkout/card", methods=["POST"])
+def process_card_checkout():
+    """Handles card authorization, canonical computation, and atomic inventory depletion."""
+    data = request.get_json()
+    if not data or "cart" not in data or "card_number" not in data:
+        return jsonify({"status": "error", "message": "Malformed payload. Requires 'cart' and 'card_number'."}), 400
+
+    cart = data["cart"]
+    card_number = str(data["card_number"])
+
+    try:
+        card_last4 = authorize_card(card_number)
+    except ValueError as ve:
+        return jsonify({"status": "error", "message": str(ve)}), 400
+    except CardDeclined as cd:
+        return jsonify({"status": "error", "message": str(cd)}), 402
+
+    subtotal = 0.0
+    total_tax = 0.0
+    receipt_items = []
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        for req_item in cart:
+            item_id = req_item.get("item_id")
+            quantity = req_item.get("quantity", 1)
+
+            cursor.execute("SELECT name, unit_price, tax_rate, stock_quantity FROM inventory WHERE item_id = %s", (item_id,))
+            db_item = cursor.fetchone()
+
+            if not db_item:
+                return jsonify({"status": "error", "message": f"Item {item_id} not found."}), 404
+            if int(db_item["stock_quantity"]) < quantity:
+                return jsonify({"status": "error", "message": f"Insufficient stock for item {item_id}."}), 409
+
+            price = float(db_item["unit_price"])
+            tax_rate = float(db_item["tax_rate"])
+            line_total = price * quantity
+            subtotal += line_total
+            total_tax += line_total * tax_rate
+            receipt_items.append({"name": db_item["name"], "quantity": quantity, "price": price})
+
+        total_due = round(subtotal + total_tax, 2)
+
+        for req_item in cart:
+            dao.decrement_stock(req_item.get("item_id"), req_item.get("quantity", 1))
+
+        receipt_data = generate_receipt(
+            cart_items=receipt_items,
+            subtotal=subtotal,
+            total_tax=total_tax,
+            total_due=total_due,
+            payment_method="card",
+            payment_details={"card_last4": card_last4},
+        )
+
+        return jsonify({
+            "status": "success",
+            "total_due": total_due,
+            "card_last4": card_last4,
+            "receipt": receipt_data,
+        }), 200
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if "cursor" in locals(): cursor.close()
+        if "conn" in locals() and conn.is_connected(): conn.close()
+
+@app.route("/api/receipts/<transaction_id>", methods=["GET"])
+def get_receipt(transaction_id):
+    """Retrieve prior receipts by transaction key."""
+    receipts_dir = os.path.join(os.path.dirname(__file__), "receipts")
+    filename = f"receipt_{transaction_id}.txt"
+    if os.path.exists(os.path.join(receipts_dir, filename)):
+        return send_from_directory(receipts_dir, filename)
+    return jsonify({"status": "error", "message": "Receipt not found"}), 404
 
 
 if __name__ == "__main__":
