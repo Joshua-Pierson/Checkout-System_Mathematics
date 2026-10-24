@@ -53,3 +53,59 @@ The Flask backend exposes the following routes for data retrieval, calculation, 
    ```bash
    git clone [https://github.com/Joshua-Pierson/Checkout-System_Mathematics.git](https://github.com/Joshua-Pierson/Checkout-System_Mathematics.git)
    cd Checkout-System_Mathematics
+
+### Container Startup & Management Guide
+
+#### 1. Prerequisites
+
+* Ensure **Docker Desktop** is installed on your machine and currently running in your system tray/menu bar.
+* Open your terminal and verify the Docker daemon is responsive:
+```bash
+docker info
+
+```
+
+
+
+#### 2. Starting the Containers
+
+To build the Docker images from scratch and start all services (Frontend, Flask Backend, and MySQL Database) concurrently in the foreground:
+
+```bash
+docker compose up --build
+
+```
+
+*Note on Terminal Usage:* Keeping this terminal open allows you to monitor real-time server logs and database initialization events. If you want the containers to run in the background instead, append the detached flag:
+
+```bash
+docker compose up --build -d
+
+```
+
+#### 3. Verifying Container Status
+
+If running in detached mode (or to verify everything is healthy while running), open a separate terminal window and check active containers:
+
+```bash
+docker compose ps
+
+```
+
+You should see all three services (`backend`, `frontend`, and `db`) listed with an active status.
+
+#### 4. Stopping and Resetting the Environment
+
+To safely stop the containers and preserve your database volume data:
+
+```bash
+docker compose down
+
+```
+
+To completely stop the containers **and wipe the database volume** (useful if you ever need a clean database re-seed from `init.sql`):
+
+```bash
+docker compose down -v
+
+```
