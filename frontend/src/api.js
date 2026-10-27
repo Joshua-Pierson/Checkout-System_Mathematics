@@ -1,4 +1,4 @@
-const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000').replace(/\/$/, '');
+const baseUrl = 'http://localhost:5001';
 
 async function request(path, { signal, method = 'GET', body } = {}) {
   let response;
@@ -34,22 +34,24 @@ export const deleteItem = (id) => request(`/api/items/${id}`, { method: 'DELETE'
 
 const cartPayload = (cart) => ({ items: cart.map((item) => ({ item_id: Number(item.code), quantity: item.quantity })) });
 
-export const calculateCart = (cart, signal) => request('/api/cart/calculate', { 
-  method: 'POST', body: cartPayload(cart), signal 
+export const calculateCart = (cart, studentId, signal) => request('/api/cart/calculate', { 
+  method: 'POST', body: { ...cartPayload(cart), student_id: studentId }, signal 
 });
 
-export const checkout = (cart, cashTendered) => request('/api/checkout/cash', {
+export const checkout = (cart, cashTendered, studentId) => request('/api/checkout/cash', {
   method: 'POST', 
   body: { 
-    cart: cart.map((item) => ({ item_id: Number(item.code), quantity: item.quantity })),
-    cash_tendered: Number(cashTendered) 
+    ...cartPayload(cart),
+    cash_tendered: Number(cashTendered),
+    student_id: studentId
   }
 });
 
-export const checkoutCard = (cart, cardNumber) => request('/api/checkout/card', {
+export const checkoutCard = (cart, cardNumber, studentId) => request('/api/checkout/card', {
   method: 'POST', 
   body: { 
-    cart: cart.map((item) => ({ item_id: Number(item.code), quantity: item.quantity })),
-    card_number: cardNumber 
+    ...cartPayload(cart),
+    card_number: cardNumber,
+    student_id: studentId
   }
 });

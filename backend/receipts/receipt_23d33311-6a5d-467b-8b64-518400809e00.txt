@@ -1,0 +1,19 @@
+========================================
+        CAMPUS CHECKOUT RECEIPT
+========================================
+Transaction ID: 23d33311-6a5d-467b-8b64-518400809e00
+Date: 2026-10-24 23:02:04
+----------------------------------------
+Introduction to Algorithm x1  $85.00
+Graphing Calculator TI-84 x1  $115.00
+Blue Scantrons 5-Pack     x1  $3.50
+----------------------------------------
+Subtotal:                      $203.50
+Tax:                           $9.78
+Total Due:                     $213.28
+----------------------------------------
+Payment Method: CASH
+Cash Tendered:                 $1000.00
+Change Due:                    $786.72
+========================================
+          Thank you for shopping!

@@ -6,7 +6,7 @@ from datetime import datetime
 RECEIPTS_DIR = os.path.join(os.path.dirname(__file__), "receipts")
 os.makedirs(RECEIPTS_DIR, exist_ok=True)
 
-def generate_receipt(cart_items, subtotal, total_tax, total_due, payment_method, payment_details):
+def generate_receipt(cart_items, subtotal, total_discount, total_tax, total_due, payment_method, payment_details, student_id=None):
     """Assembles transactional metadata into a canonical audit document and persists to disk."""
     transaction_id = str(uuid.uuid4())
     timestamp = datetime.now()
@@ -16,16 +16,26 @@ def generate_receipt(cart_items, subtotal, total_tax, total_due, payment_method,
         "        CAMPUS CHECKOUT RECEIPT",
         "=" * 40,
         f"Transaction ID: {transaction_id}",
-        f"Date: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}",
-        "-" * 40
+        f"Date: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
     ]
+    
+    if student_id:
+        lines.append(f"Student ID: {student_id}")
+        
+    lines.append("-" * 40)
     
     for item in cart_items:
         lines.append(f"{item['name'][:25]:<25} x{item['quantity']}  ${(item['price'] * item['quantity']):.2f}")
         
     lines.extend([
         "-" * 40,
-        f"Subtotal:                      ${subtotal:.2f}",
+        f"Subtotal:                      ${subtotal:.2f}"
+    ])
+    
+    if total_discount > 0:
+        lines.append(f"Student Discount:             -${total_discount:.2f}")
+        
+    lines.extend([
         f"Tax:                           ${total_tax:.2f}",
         f"Total Due:                     ${total_due:.2f}",
         "-" * 40,

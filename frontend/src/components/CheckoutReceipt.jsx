@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { checkout, checkoutCard } from '../api.js';
 import { money } from '../utils/cart.js';
 
-export default function CheckoutReceipt({ cart, totalsReady, busy, setBusy }) {
+export default function CheckoutReceipt({ cart, totalsReady, busy, setBusy, studentId }) {
   const [result, setResult] = useState(null);
   const [message, setMessage] = useState('');
   const [method, setMethod] = useState('cash');
@@ -20,8 +20,8 @@ export default function CheckoutReceipt({ cart, totalsReady, busy, setBusy }) {
     
     try {
       const response = method === 'cash' 
-        ? await checkout(cart, cash)
-        : await checkoutCard(cart, card);
+        ? await checkout(cart, cash, studentId)
+        : await checkoutCard(cart, card, studentId);
         
       setResult({ ...response, items: cart.map((item) => ({ ...item })) });
       setMessage('Transaction complete. Inventory updated.');
@@ -90,6 +90,8 @@ export default function CheckoutReceipt({ cart, totalsReady, busy, setBusy }) {
         <>
           <p><strong>Status:</strong> {result.status.toUpperCase()}</p>
           <ul>{result.items.map((item) => <li key={item.code}>{item.name} × {item.quantity}: {money(item.priceCents * item.quantity)}</li>)}</ul>
+          <p>Subtotal: ${Number(result.subtotal || 0).toFixed(2)}</p>
+          {result.discount > 0 && <p>Student Discount: -${Number(result.discount).toFixed(2)}</p>}
           <p>Total Due: ${Number(result.total_due).toFixed(2)}</p>
         </>
       )}
