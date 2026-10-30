@@ -1,0 +1,18 @@
+========================================
+        CAMPUS CHECKOUT RECEIPT
+========================================
+Transaction ID: 1ca710f0-c564-42bc-abe0-d87a7bd75bcc
+Date: 2026-10-24 22:48:38
+----------------------------------------
+Graphing Calculator TI-84 x1  $115.00
+Introduction to Algorithm x1  $85.00
+----------------------------------------
+Subtotal:                      $200.00
+Tax:                           $9.49
+Total Due:                     $209.49
+----------------------------------------
+Payment Method: CASH
+Cash Tendered:                 $209.49
+Change Due:                    $0.00
+========================================
+          Thank you for shopping!
