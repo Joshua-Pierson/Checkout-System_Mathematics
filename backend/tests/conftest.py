@@ -44,7 +44,7 @@ def inventory_dao():
     except mysql.Error as err:
         pytest.skip(f"MySQL not available: {err}")
     cur = conn.cursor()
-    for table in ["sale_items", "sales", "tax_exempt_categories", "inventory"]:
+    for table in ["apparel_variants", "sale_items", "sales", "tax_exempt_categories", "inventory"]:
         cur.execute(f"DROP TABLE IF EXISTS {table}")
     _run_init_sql(cur)
     cur.executemany(

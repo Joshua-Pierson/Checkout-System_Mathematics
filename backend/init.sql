@@ -12,6 +12,18 @@ CREATE TABLE IF NOT EXISTS inventory (
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+-- ---------- Apparel sizes and colors (Hien) ----------
+-- One row per size + color of an apparel item, each with its own stock.
+CREATE TABLE IF NOT EXISTS apparel_variants (
+    variant_id     INT AUTO_INCREMENT PRIMARY KEY,
+    item_id        INT          NOT NULL,
+    size           VARCHAR(10)  NOT NULL,     -- XS, S, M, L, XL, XXL
+    color          VARCHAR(30)  NOT NULL,
+    stock_quantity INT          NOT NULL DEFAULT 0,
+    UNIQUE KEY uq_item_size_color (item_id, size, color),
+    FOREIGN KEY (item_id) REFERENCES inventory(item_id) ON DELETE CASCADE
+);
+
 -- ---------- Sales, receipts, tax-exempt (Henry) ----------
 -- Same tables as sales_schema.sql + tax_card_schema.sql, so a fresh Docker
 -- database has everything. Keep them in sync if you change one.
