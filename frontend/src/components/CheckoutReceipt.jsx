@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { checkout, checkoutCard } from '../api.js';
-import { money } from '../utils/cart.js';
+import { money, linePricing } from '../utils/cart.js';
 
 export default function CheckoutReceipt({ cart, totalsReady, busy, setBusy, studentId }) {
   const [result, setResult] = useState(null);
@@ -89,8 +89,9 @@ export default function CheckoutReceipt({ cart, totalsReady, busy, setBusy, stud
       ) : (
         <>
           <p><strong>Status:</strong> {result.status.toUpperCase()}</p>
-          <ul>{result.items.map((item) => <li key={item.code}>{item.name} × {item.quantity}: {money(item.priceCents * item.quantity)}</li>)}</ul>
+          <ul>{result.items.map((item) => <li key={item.code}>{item.name} × {item.quantity}: {money(linePricing(item).totalCents)}{linePricing(item).savingsCents > 0 && ` (multi-buy savings ${money(linePricing(item).savingsCents)})`}</li>)}</ul>
           <p>Subtotal: ${Number(result.subtotal || 0).toFixed(2)}</p>
+          {result.multi_buy_discount > 0 && <p>Multi-buy Discount: -${Number(result.multi_buy_discount).toFixed(2)}</p>}
           {result.discount > 0 && <p>Student Discount: -${Number(result.discount).toFixed(2)}</p>}
           <p>Total Due: ${Number(result.total_due).toFixed(2)}</p>
         </>

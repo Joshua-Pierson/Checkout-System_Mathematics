@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { money } from '../utils/cart.js';
+import { money, linePricing, multiBuySavings, confirmMultiBuy } from '../utils/cart.js';
 import CheckoutReceipt from './CheckoutReceipt.jsx';
 import { calculateCart } from '../api.js';
 
@@ -15,7 +15,10 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
     
     // Automatically recalculates whenever cart OR studentId changes
     calculateCart(cart, studentId.trim(), controller.signal).then((result) => {
-      if (!controller.signal.aborted) setTotals({ ...result, cart, status: 'ready' });
+      if (!controller.signal.aborted) {
+        confirmMultiBuy(cart, result);
+        setTotals({ ...result, cart, studentId: studentId.trim(), status: 'ready' });
+      }
     }).catch((error) => {
       if (!controller.signal.aborted) setTotals({ cart, status: 'error', error: error.message });
     });
@@ -23,7 +26,7 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
     return () => controller.abort();
   }, [cart, studentId]);
 
-  const totalsReady = totals.cart === cart && totals.status === 'ready';
+  const totalsReady = totals.cart === cart && totals.status === 'ready' && (!cart.length || totals.studentId === studentId.trim());
 
   const [code, setCode] = useState('');
   const [category, setCategory] = useState('');
@@ -98,7 +101,7 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
               <tbody id="product-list">{matches.map((product) => {
                 const quantity = cart.find((item) => item.code === product.code)?.quantity || 0;
                 return <tr key={product.code}><td><span className="item-code">{product.code}</span></td><td className="product-name">{product.name}</td>
-                  <td className="price-cell">{money(product.priceCents)}</td><td><span className="category-pill">{product.category}</span></td>
+                  <td className="price-cell">{money(product.priceCents)}{product.multiBuy && <small className="deal-label">{product.multiBuy.quantity} for {money(product.multiBuy.priceCents)}</small>}</td><td><span className="category-pill">{product.category}</span></td>
                   <td><button className="add-product" type="button" aria-label={`Add ${product.name} to cart`} disabled={quantity >= product.stock} onClick={() => add(product.code)}>
                     {product.stock === 0 ? 'Sold out' : <><span aria-hidden="true">+</span> Add</>}</button></td></tr>;
               })}</tbody>
@@ -120,7 +123,9 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
         <div id="added-items">
           {!cart.length && <div className="empty-cart"><span className="empty-cart-icon" aria-hidden="true"> </span><h3>A fresh start</h3><p>Your cart is empty.<br />Add something from the catalog to begin.</p></div>}
           {cart.map((item) => <div className="cart-item" key={item.code}>
-            <div className="cart-item-top"><div><h3>{item.name}</h3><p>#{item.code} <span> </span> {money(item.priceCents)} each</p></div><strong>{money(item.priceCents * item.quantity)}</strong></div>
+            <div className="cart-item-top"><div><h3>{item.name}</h3><p>#{item.code} <span> </span> {money(item.priceCents)} each</p></div><strong>{money(linePricing(item).totalCents)}</strong></div>
+            {item.multiBuy && <p className="deal-label">{item.multiBuy.quantity} for {money(item.multiBuy.priceCents)}
+              {linePricing(item).savingsCents > 0 ? ` · You save ${money(linePricing(item).savingsCents)}` : ' · Add more to qualify'}</p>}
             <div className="cart-item-actions"><div className="quantity-control">
               <button type="button" aria-label={`Decrease ${item.name} quantity`} disabled={item.quantity <= 1} onClick={() => dispatch({ type: 'decrease', code: item.code })}> </button>
               <span aria-label={`Quantity ${item.quantity}`}>{item.quantity}</span>
@@ -129,8 +134,10 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
           </div>)}
         </div>
         
+        {!totalsReady && multiBuySavings(cart) > 0 && <p className="deal-label">Multi-buy savings: {money(multiBuySavings(cart))} (pending server confirmation)</p>}
         <div id="cart-total" className="totals" role="status" aria-live="polite">{totalsReady ? <>
           <p><span>Subtotal</span><span>${Number(totals.subtotal).toFixed(2)}</span></p>
+          {totals.multi_buy_discount > 0 && <p><span>Multi-buy Discount</span><span>-${Number(totals.multi_buy_discount).toFixed(2)}</span></p>}
           {totals.discount > 0 && <p><span style={{color: '#245337'}}>Student Discount</span><span style={{color: '#245337'}}>-${Number(totals.discount).toFixed(2)}</span></p>}
           <p><span>Tax</span><span>${Number(totals.tax).toFixed(2)}</span></p>
           <p className="grand-total"><span>Total</span><strong>${Number(totals.total).toFixed(2)}</strong></p>

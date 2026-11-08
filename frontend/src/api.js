@@ -55,3 +55,5 @@ export const checkoutCard = (cart, cardNumber, studentId) => request('/api/check
     student_id: studentId
   }
 });
+
+export const createBundle = (bundle) => request('/api/bundles', { method: 'POST', body: bundle });

@@ -53,7 +53,7 @@ export default function App() {
           dispatch={dispatch} active={view === 'student'} />
       </section>
       <section hidden={view !== 'manager' && view !== 'manager-page'} aria-labelledby="manager-heading">
-        {view !== 'student' && <ManagerCatalog onSaved={() => { dispatch({ type: 'cancel' }); setInventoryVersion((version) => version + 1); }} onStudent={() => setView('student')} onPage={(isPage) => setView(isPage ? 'manager-page' : 'manager')} />}
+        {view !== 'student' && <ManagerCatalog {...inventory} onSaved={() => { dispatch({ type: 'cancel' }); setInventoryVersion((version) => version + 1); }} onStudent={() => setView('student')} onPage={(isPage) => setView(isPage ? 'manager-page' : 'manager')} />}
       </section>
     </main>
     <footer className="app-footer">Campus Checkout <span>Find your essentials. Make them yours.</span></footer>
