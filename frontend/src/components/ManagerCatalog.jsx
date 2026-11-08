@@ -2,6 +2,7 @@ import { useState } from 'react';
 import CatalogForm from './manager/CatalogForm.jsx';
 
 import BundleForm from './manager/BundleForm.jsx';
+import CatalogList from './manager/CatalogList.jsx';
 
 const actions = [
   { value: 'add', label: 'Add to Catalog' },
@@ -17,6 +18,7 @@ export default function ManagerCatalog({ onStudent, onSaved, catalog, status, er
     <p className="eyebrow">MANAGER WORKSPACE</p>
     <h1 id="manager-heading">Catalog Management</h1>
     <p>Manage catalog items and create named course supply kits.</p>
+    <CatalogList catalog={catalog} status={status} error={error} />
     <div className="manager-actions" role="group" aria-label="Catalog action">
       {actions.map((entry) => <button key={entry.value} type="button"
         aria-pressed={action === entry.value} disabled={saving}
