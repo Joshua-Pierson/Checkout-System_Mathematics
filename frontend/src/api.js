@@ -32,16 +32,16 @@ export const createItem = (item) => request('/api/items', { method: 'POST', body
 export const updateItem = (id, item) => request(`/api/items/${id}`, { method: 'PUT', body: item });
 export const deleteItem = (id) => request(`/api/items/${id}`, { method: 'DELETE' });
 
-const cartPayload = (cart) => ({ items: cart.map((item) => ({ item_id: Number(item.code), quantity: item.quantity })) });
+const cartItems = (cart) => cart.map((item) => ({ item_id: Number(item.code), quantity: item.quantity }));
 
 export const calculateCart = (cart, studentId, signal) => request('/api/cart/calculate', { 
-  method: 'POST', body: { ...cartPayload(cart), student_id: studentId }, signal 
+  method: 'POST', body: { items: cartItems(cart), student_id: studentId }, signal 
 });
 
 export const checkout = (cart, cashTendered, studentId) => request('/api/checkout/cash', {
   method: 'POST', 
   body: { 
-    ...cartPayload(cart),
+    cart: cartItems(cart),
     cash_tendered: Number(cashTendered),
     student_id: studentId
   }
@@ -50,7 +50,7 @@ export const checkout = (cart, cashTendered, studentId) => request('/api/checkou
 export const checkoutCard = (cart, cardNumber, studentId) => request('/api/checkout/card', {
   method: 'POST', 
   body: { 
-    ...cartPayload(cart),
+    cart: cartItems(cart),
     card_number: cardNumber,
     student_id: studentId
   }
