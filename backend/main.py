@@ -6,10 +6,54 @@ from mysql_dao import InventoryModel
 from receipt_service import generate_receipt
 from card_payment import authorize_card, CardDeclined
 from discount_service import calculate_discounts
+from discount_service import calculate_discounts
+from discount_dao import DiscountDAO # <-- Add this import
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
 dao = InventoryModel()
+discount_dao_manager = DiscountDAO(dao) # <-- Initialize the new DAO
+
+@app.route("/api/discounts/categories", methods=["GET"])
+def get_discount_eligibilities():
+    """Merges canonical categories with discount eligibility flags for the manager UI."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT DISTINCT category FROM inventory WHERE category IS NOT NULL")
+        all_cats = [row["category"] for row in cursor.fetchall()]
+        
+        eligibility_map = discount_dao_manager.get_eligibility_map()
+        
+        results = []
+        for cat in all_cats:
+            results.append({
+                "category": cat,
+                "student_eligible": eligibility_map.get(cat, {}).get("student", False),
+                "employee_eligible": eligibility_map.get(cat, {}).get("employee", True)
+            })
+        return jsonify({"status": "success", "data": results})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if "cursor" in locals(): cursor.close()
+        if "conn" in locals() and conn.is_connected(): conn.close()
+
+@app.route("/api/discounts/categories/<string:category>", methods=["PUT"])
+def update_discount_eligibility(category):
+    """Mutates the discount eligibility toggles for a specific category."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"status": "error", "message": "Missing JSON payload"}), 400
+        
+    student_eligible = data.get("student_eligible", False)
+    employee_eligible = data.get("employee_eligible", True)
+    
+    try:
+        discount_dao_manager.update_eligibility(category, student_eligible, employee_eligible)
+        return jsonify({"status": "success", "message": f"Updated eligibility for {category}"}), 200
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 def get_db_connection():
     return mysql.connector.connect(
@@ -50,6 +94,34 @@ def get_categories():
         if "cursor" in locals(): cursor.close()
         if "conn" in locals() and conn.is_connected(): conn.close()
 
+@app.route("/api/discounts/rules", methods=["GET"])
+def get_discount_rules():
+    """Returns the current mathematical configurations for discount profiles."""
+    try:
+        rules = discount_dao_manager.get_discount_rules()
+        return jsonify({"status": "success", "data": rules})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/discounts/rules/<string:profile>", methods=["PUT"])
+def update_discount_rule(profile):
+    """Mutates a discount profile to switch between percent and flat dollar logic."""
+    data = request.get_json()
+    if not data or "discount_type" not in data or "discount_value" not in data:
+        return jsonify({"status": "error", "message": "Missing JSON payload parameters"}), 400
+        
+    try:
+        discount_dao_manager.update_discount_rule(
+            profile_name=profile,
+            discount_type=data["discount_type"],
+            discount_value=data["discount_value"]
+        )
+        return jsonify({"status": "success", "message": f"Updated rule for {profile}"}), 200
+    except ValueError as ve:
+        return jsonify({"status": "error", "message": str(ve)}), 400
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route("/api/cart/calculate", methods=["POST"])
 def calculate_cart():
     data = request.get_json()
@@ -57,6 +129,8 @@ def calculate_cart():
         return jsonify({"status": "error", "message": "Invalid payload format"}), 400
 
     student_id = data.get("student_id", "")
+    employee_id = data.get("employee_id", "")
+
     subtotal = 0.0
     total_tax = 0.0
     receipt_items = []
@@ -64,13 +138,14 @@ def calculate_cart():
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
+
         for req_item in data["items"]:
             item_id = req_item.get("item_id")
             quantity = req_item.get("quantity", 1)
-            
+
             cursor.execute("SELECT name, unit_price, tax_rate, category FROM inventory WHERE item_id = %s", (item_id,))
             db_item = cursor.fetchone()
-            
+
             if db_item:
                 receipt_items.append({
                     "name": db_item["name"],
@@ -80,13 +155,18 @@ def calculate_cart():
                     "tax_rate": float(db_item["tax_rate"])
                 })
 
-        is_student, discount_total = calculate_discounts(receipt_items, student_id)
+        # 2. Fetch the dynamic rulesets and configurations from the database
+        eligibility_map = discount_dao_manager.get_eligibility_map()
+        discount_rules = discount_dao_manager.get_discount_rules()
+
+        # 3. Run mutual exclusion discount engine using the dynamic parameters
+        discount_info = calculate_discounts(receipt_items, student_id, employee_id, eligibility_map, discount_rules)
+        discount_total = discount_info["amount"]
 
         for item in receipt_items:
             line_total = item["price"] * item["quantity"]
             subtotal += line_total
-            # Calculate tax on the discounted line total
-            discounted_line = line_total - item["discount"]
+            discounted_line = line_total - item.get("discount", 0)
             total_tax += discounted_line * item["tax_rate"]
 
         total_due = subtotal - discount_total + total_tax
@@ -95,6 +175,7 @@ def calculate_cart():
             "status": "success",
             "subtotal": round(subtotal, 2),
             "discount": round(discount_total, 2),
+            "discount_type": discount_info["type"],
             "tax": round(total_tax, 2),
             "total": round(total_due, 2),
         })
@@ -112,6 +193,7 @@ def process_cash_checkout():
 
     cart = data["cart"]
     student_id = data.get("student_id", "")
+    employee_id = data.get("employee_id", "")
     try:
         cash_tendered = float(data["cash_tendered"])
     except ValueError:
@@ -146,7 +228,13 @@ def process_cash_checkout():
                 "tax_rate": float(db_item["tax_rate"])
             })
 
-        is_student, discount_total = calculate_discounts(receipt_items, student_id)
+        # 2. Fetch the dynamic rulesets and configurations from the database
+        eligibility_map = discount_dao_manager.get_eligibility_map()
+        discount_rules = discount_dao_manager.get_discount_rules()
+
+        # 3. Run mutual exclusion discount engine using the dynamic parameters
+        discount_info = calculate_discounts(receipt_items, student_id, employee_id, eligibility_map, discount_rules)
+        discount_total = discount_info["amount"]
 
         for item in receipt_items:
             line_total = item["price"] * item["quantity"]
@@ -168,18 +256,18 @@ def process_cash_checkout():
         receipt_data = generate_receipt(
             cart_items=receipt_items,
             subtotal=subtotal,
-            total_discount=discount_total,
             total_tax=total_tax,
             total_due=total_due,
             payment_method="cash",
             payment_details={"cash_tendered": cash_tendered, "change_due": change_due},
-            student_id=student_id if is_student else None
+            discount_info=discount_info
         )
 
         return jsonify({
             "status": "success",
             "subtotal": round(subtotal, 2),
             "discount": round(discount_total, 2),
+            "discount_type": discount_info["type"],
             "total_due": total_due,
             "cash_tendered": cash_tendered,
             "change_due": change_due,
@@ -201,6 +289,7 @@ def process_card_checkout():
     cart = data["cart"]
     card_number = str(data["card_number"])
     student_id = data.get("student_id", "")
+    employee_id = data.get("employee_id", "")
     
     try:
         card_last4 = authorize_card(card_number)
@@ -238,7 +327,13 @@ def process_card_checkout():
                 "tax_rate": float(db_item["tax_rate"])
             })
 
-        is_student, discount_total = calculate_discounts(receipt_items, student_id)
+        # 2. Fetch the dynamic rulesets and configurations from the database
+        eligibility_map = discount_dao_manager.get_eligibility_map()
+        discount_rules = discount_dao_manager.get_discount_rules()
+
+        # 3. Run mutual exclusion discount engine using the dynamic parameters
+        discount_info = calculate_discounts(receipt_items, student_id, employee_id, eligibility_map, discount_rules)
+        discount_total = discount_info["amount"]
 
         for item in receipt_items:
             line_total = item["price"] * item["quantity"]
@@ -254,18 +349,18 @@ def process_card_checkout():
         receipt_data = generate_receipt(
             cart_items=receipt_items,
             subtotal=subtotal,
-            total_discount=discount_total,
             total_tax=total_tax,
             total_due=total_due,
             payment_method="card",
             payment_details={"card_last4": card_last4},
-            student_id=student_id if is_student else None
+            discount_info=discount_info
         )
 
         return jsonify({
             "status": "success",
             "subtotal": round(subtotal, 2),
             "discount": round(discount_total, 2),
+            "discount_type": discount_info["type"],
             "total_due": total_due,
             "card_last4": card_last4,
             "receipt": receipt_data
