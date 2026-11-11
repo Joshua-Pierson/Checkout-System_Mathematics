@@ -122,16 +122,36 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
         <div className="panel-heading"><div><p className="small-kicker">YOUR SELECTION</p><h2 id="order-heading">Order summary</h2></div><span className="count-badge">{itemCount} {itemCount === 1 ? 'item' : 'items'}</span></div>
         <div id="added-items">
           {!cart.length && <div className="empty-cart"><span className="empty-cart-icon" aria-hidden="true"> </span><h3>A fresh start</h3><p>Your cart is empty.<br />Add something from the catalog to begin.</p></div>}
-          {cart.map((item) => <div className="cart-item" key={item.code}>
-            <div className="cart-item-top"><div><h3>{item.name}</h3><p>#{item.code} <span> </span> {money(item.priceCents)} each</p></div><strong>{money(linePricing(item).totalCents)}</strong></div>
-            {item.multiBuy && <p className="deal-label">{item.multiBuy.quantity} for {money(item.multiBuy.priceCents)}
-              {linePricing(item).savingsCents > 0 ? ` · You save ${money(linePricing(item).savingsCents)}` : ' · Add more to qualify'}</p>}
-            <div className="cart-item-actions"><div className="quantity-control">
-              <button type="button" aria-label={`Decrease ${item.name} quantity`} disabled={item.quantity <= 1} onClick={() => dispatch({ type: 'decrease', code: item.code })}> </button>
-              <span aria-label={`Quantity ${item.quantity}`}>{item.quantity}</span>
-              <button type="button" aria-label={`Increase ${item.name} quantity`} disabled={item.quantity >= item.stock} onClick={() => add(item.code)}>+</button>
-            </div><button className="remove-item" type="button" onClick={() => dispatch({ type: 'remove', code: item.code })} aria-label={`Remove ${item.name} from cart`}>Remove</button></div>
-          </div>)}
+          {cart.map((item) => {
+            const backendData = totalsReady && totals.items
+              ? totals.items.find((i) => String(i.item_id) === String(item.code))
+              : null;
+            const displayTotal = backendData ? backendData.line_total * 100 : item.priceCents * item.quantity;
+            const bundleApplied = backendData?.bundle_applied;
+
+            return <div className="cart-item" key={item.code}>
+              <div className="cart-item-top">
+                <div>
+                  <h3>{item.name}</h3>
+                  <p>#{item.code} <span>•</span> {money(item.priceCents)} each</p>
+                  {bundleApplied && (
+                    <p style={{ color: '#245337', fontWeight: '700', marginTop: '4px' }}>
+                      * Bundle Deal: {backendData.bundle_trigger} for ${Number(backendData.bundle_price).toFixed(2)}
+                    </p>
+                  )}
+                </div>
+                <strong>{money(displayTotal)}</strong>
+              </div>
+              <div className="cart-item-actions">
+                <div className="quantity-control">
+                  <button type="button" aria-label={`Decrease ${item.name} quantity`} disabled={item.quantity <= 1} onClick={() => dispatch({ type: 'decrease', code: item.code })}>-</button>
+                  <span aria-label={`Quantity ${item.quantity}`}>{item.quantity}</span>
+                  <button type="button" aria-label={`Increase ${item.name} quantity`} disabled={item.quantity >= item.stock} onClick={() => add(item.code)}>+</button>
+                </div>
+                <button className="remove-item" type="button" onClick={() => dispatch({ type: 'remove', code: item.code })} aria-label={`Remove ${item.name} from cart`}>Remove</button>
+              </div>
+            </div>;
+          })}
         </div>
         
         {!totalsReady && multiBuySavings(cart) > 0 && <p className="deal-label">Multi-buy savings: {money(multiBuySavings(cart))} (pending server confirmation)</p>}

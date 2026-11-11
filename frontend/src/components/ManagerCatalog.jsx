@@ -8,7 +8,7 @@ const actions = [
   { value: 'add', label: 'Add to Catalog' },
   { value: 'edit', label: 'Edit Catalog' },
   { value: 'remove', label: 'Remove From Catalog' },
-  { value: 'bundle', label: 'Create Course Bundle' },
+  { value: 'bundles', label: 'Manage Multi-Buy Bundles' },
 ];
 
 export default function ManagerCatalog({ onStudent, onSaved, catalog, status, error }) {
@@ -25,8 +25,11 @@ export default function ManagerCatalog({ onStudent, onSaved, catalog, status, er
         onClick={() => setAction(entry.value)}>{entry.label}</button>)}
     </div>
     <div className="manager-form-panel">
-      {action === 'bundle' ? <BundleForm catalog={catalog} status={status} error={error} onBusyChange={setSaving} /> :
-        <CatalogForm key={action} action={action} onSaved={onSaved} embedded onBusyChange={setSaving} />}
+      {action === 'bundles' ? (
+        <BundleForm catalog={catalog} status={status} error={error} onBusyChange={setSaving} />
+      ) : (
+        <CatalogForm key={action} action={action} onSaved={onSaved} embedded onBusyChange={setSaving} />
+      )}
     </div>
     <button className="manager-student-return" type="button" disabled={saving} onClick={onStudent}>Back to Student View</button>
   </>;

@@ -6,7 +6,6 @@ RECEIPTS_DIR = os.path.join(os.path.dirname(__file__), "receipts")
 os.makedirs(RECEIPTS_DIR, exist_ok=True)
 
 def generate_receipt(cart_items, subtotal, total_tax, total_due, payment_method, payment_details, discount_info=None):
-    """Assembles transactional metadata into a canonical audit document and persists to disk."""
     transaction_id = str(uuid.uuid4())
     timestamp = datetime.now()
     
@@ -24,7 +23,9 @@ def generate_receipt(cart_items, subtotal, total_tax, total_due, payment_method,
     lines.append("-" * 40)
     
     for item in cart_items:
-        lines.append(f"{item['name'][:25]:<25} x{item['quantity']}  ${(item['price'] * item['quantity']):.2f}")
+        lines.append(f"{item['name'][:25]:<25} x{item['quantity']}  ${item['line_total']:.2f}")
+        if item.get('bundle_applied'):
+            lines.append(f"  * Bundle Deal: {item['bundle_trigger']} for ${item['bundle_price']:.2f}")
         
     lines.extend([
         "-" * 40,
