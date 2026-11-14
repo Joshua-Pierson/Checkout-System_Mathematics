@@ -2,12 +2,10 @@ import os
 import uuid
 from datetime import datetime
 
-# Scaffold the backend/receipts directory on module load
 RECEIPTS_DIR = os.path.join(os.path.dirname(__file__), "receipts")
 os.makedirs(RECEIPTS_DIR, exist_ok=True)
 
-def generate_receipt(cart_items, subtotal, total_discount, total_tax, total_due, payment_method, payment_details, student_id=None):
-    """Assembles transactional metadata into a canonical audit document and persists to disk."""
+def generate_receipt(cart_items, subtotal, total_tax, total_due, payment_method, payment_details, discount_info=None):
     transaction_id = str(uuid.uuid4())
     timestamp = datetime.now()
     
@@ -19,21 +17,23 @@ def generate_receipt(cart_items, subtotal, total_discount, total_tax, total_due,
         f"Date: {timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
     ]
     
-    if student_id:
-        lines.append(f"Student ID: {student_id}")
+    if discount_info and discount_info.get("type"):
+        lines.append(f"{discount_info['type']} ID: {discount_info['id']}")
         
     lines.append("-" * 40)
     
     for item in cart_items:
-        lines.append(f"{item['name'][:25]:<25} x{item['quantity']}  ${(item['price'] * item['quantity']):.2f}")
+        lines.append(f"{item['name'][:25]:<25} x{item['quantity']}  ${item['line_total']:.2f}")
+        if item.get('bundle_applied'):
+            lines.append(f"  * Bundle Deal: {item['bundle_trigger']} for ${item['bundle_price']:.2f}")
         
     lines.extend([
         "-" * 40,
         f"Subtotal:                      ${subtotal:.2f}"
     ])
     
-    if total_discount > 0:
-        lines.append(f"Student Discount:             -${total_discount:.2f}")
+    if discount_info and discount_info.get("amount", 0) > 0:
+        lines.append(f"{discount_info['type']} Discount:             -${discount_info['amount']:.2f}")
         
     lines.extend([
         f"Tax:                           ${total_tax:.2f}",

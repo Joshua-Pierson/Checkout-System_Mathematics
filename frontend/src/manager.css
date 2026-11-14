@@ -22,3 +22,9 @@ section[aria-labelledby='manager-heading'] [role='status']:not(:empty) { padding
 .manager-form-panel { padding-top: 4px; }
 .manager-student-return { margin-top: 28px; background: white; color: var(--green); border-color: #ccdcca; font-size: 12px; }
 @media (max-width: 600px) { .manager-actions { flex-direction: column; } .manager-actions button { text-align: left; } }
+
+section[aria-labelledby='manager-heading'] .bundle-form fieldset { display: flex; flex-direction: column; gap: 18px; }
+.bundle-row { display: grid; grid-template-columns: minmax(0, 1fr) 90px auto; align-items: end; gap: 12px; padding: 16px; border: 1px solid #dce7d5; border-radius: 8px; }
+.bundle-row select { width: 100%; }
+.bundle-buttons { display: flex; flex-wrap: wrap; gap: 12px; }
+@media (max-width: 600px) { .bundle-row { grid-template-columns: 1fr; } }
