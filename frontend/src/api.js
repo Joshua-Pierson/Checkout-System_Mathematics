@@ -16,7 +16,9 @@ async function request(path, { signal, method = 'GET', body } = {}) {
   try { result = await response.json(); }
   catch { throw new Error(`Backend returned an invalid response (${response.status}).`); }
   if (!response.ok || result.status !== 'success') {
-    throw new Error(result.message || `Request failed (${response.status}).`);
+    const error = new Error(result.message || `Request failed (${response.status}).`);
+    error.status = response.status;
+    throw error;
   }
   return result;
 }
@@ -90,3 +92,14 @@ export async function validateCourseBundle(courseCode, signal) {
   }
   return result;
 }
+
+export const authorizePriceChange = (data) => request('/api/cart/override/price', {
+  method: 'PUT', body: data,
+});
+
+export const staffLogin = (staffId, pin) => request('/api/auth/login', {
+  method: 'POST', body: { staff_id: staffId.trim(), pin },
+});
+export const authorizeItemRemoval = (itemId, staffId, pin) => request('/api/cart/override/item', {
+  method: 'DELETE', body: { item_id: Number(itemId), staff_id: staffId.trim(), pin },
+});

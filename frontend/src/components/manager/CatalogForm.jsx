@@ -63,7 +63,7 @@ export default function CatalogForm({ action, onBack, onSaved, embedded = false,
     <h2 id="catalog-form-heading">{titles[action]}</h2>
     {!embedded && <nav><ul><li><a href="#manager-menu" onClick={(event) => { if (busy) event.preventDefault(); else onBack(event); }}>Go Back</a></li></ul></nav>}
     {action === 'add' && <p>The database assigns the item ID.</p>}
-    {action !== 'remove' && <p>Use an existing category. Tax rate example: 0.0825 for 8.25%, or 0 for exempt.</p>}
+    {action !== 'remove' && <p>Use Change Price for price changes. Use an existing category. Tax rate example: 0.0825 for 8.25%, or 0 for exempt.</p>}
     {action !== 'remove' && <p>Example deal: quantity 3, bundle price 15.00. Leave both deal fields blank for regular pricing (this clears an existing deal when editing).</p>}
     <form id={`${action}Form`} onSubmit={submit}>
       <fieldset disabled={busy}>

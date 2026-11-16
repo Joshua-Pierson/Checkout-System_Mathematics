@@ -14,6 +14,7 @@ export async function saveCatalogItem(action, id, item, deal, api) {
     if (!original) throw new Error(`Item ${id} not found. Refresh the catalog and check the ID.`);
     const changes = Object.fromEntries(Object.entries(item).filter(([key, value]) =>
       typeof value === 'number' ? Number(original[key]) !== value : original[key] !== value));
+    if ('unit_price' in changes) throw new Error('Use Manager → Change Price to change a price with staff approval and a recorded reason.');
     if (Object.keys(changes).length) {
       await api.updateItem(id, changes);
       itemChanged = true;

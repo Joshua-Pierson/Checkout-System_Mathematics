@@ -1,3 +1,4 @@
+import StaffRemovalDialog from './StaffRemovalDialog.jsx';
 import { APPAREL_SIZES, APPAREL_COLORS, isApparel, cartKey, productQuantity, selectionLineTotal } from '../utils/apparel.js';
 import { useEffect, useRef, useState } from 'react';
 import { money, linePricing, multiBuySavings, confirmMultiBuy } from '../utils/cart.js';
@@ -9,6 +10,8 @@ import { calculateCart } from '../api.js';
 export default function StudentCart({ catalog, status, error, cart, message, dispatch, active }) {
   const [selections, setSelections] = useState({});
   const [busy, setBusy] = useState(false);
+  const [removalItem, setRemovalItem] = useState(null);
+  function closeRemoval() { setRemovalItem(null); setBusy(false); }
   const [studentId, setStudentId] = useState('');
   const [employeeId, setEmployeeId] = useState('');
   const [totals, setTotals] = useState({ cart: null, status: 'idle' });
@@ -178,7 +181,7 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
                   <span aria-label={`Quantity ${item.quantity}`}>{item.quantity}</span>
                   <button type="button" aria-label={`Increase ${item.name} quantity`} disabled={productQuantity(cart, item.code) >= item.stock} onClick={() => add(item.code, item)}>+</button>
                 </div>
-                <button className="remove-item" type="button" onClick={() => dispatch({ type: 'remove', key: cartKey(item) })} aria-label={`Remove ${item.name} from cart`}>Remove</button>
+                <button className="remove-item" type="button" onClick={() => { setRemovalItem(item); setBusy(true); }} aria-label={`Remove ${item.name} from cart`}>Remove</button>
               </div>
             </div>;
           })}
@@ -197,5 +200,8 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
         <button id="cancel-transaction" className="cancel-transaction" type="button" disabled={!cart.length && !studentId && !employeeId} onClick={cancel}>Cancel transaction</button>
       </aside>
     </fieldset>
+    {removalItem && <StaffRemovalDialog item={removalItem} onCancel={closeRemoval} onApproved={() => {
+      dispatch({ type: 'remove', key: cartKey(removalItem) }); closeRemoval();
+    }} />}
   </>;
 }

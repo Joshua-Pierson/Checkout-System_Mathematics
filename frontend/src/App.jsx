@@ -1,3 +1,5 @@
+import { useStaffAuth } from './StaffAuth.jsx';
+import StaffLogin from './components/StaffLogin.jsx';
 import { cartKey } from './utils/apparel.js';
 import { useEffect, useReducer, useState } from 'react';
 import { fetchInventory } from './api.js';
@@ -23,6 +25,7 @@ function transactionReducer(state, action) {
 }
 
 export default function App() {
+  const { staff, logout } = useStaffAuth();
   const [view, setView] = useState('student');
   const [inventoryVersion, setInventoryVersion] = useState(0);
   const [inventory, setInventory] = useState({ catalog: [], status: 'loading', error: '' });
@@ -50,13 +53,17 @@ export default function App() {
         <button type="button" aria-pressed={view !== 'student'} onClick={() => setView('manager')}>Manager</button>
       </nav>
     </header>
+    {staff && <div className="staff-session-bar" role="status">
+      <span>Staff: {staff.name || staff.staff_id}</span>
+      <button type="button" onClick={() => { logout(); setView('student'); }}>Sign out</button>
+    </div>}
     <main>
       <section hidden={view !== 'student'} aria-labelledby="cart-heading">
         <StudentCart {...inventory} cart={transaction.cart} message={transaction.message}
           dispatch={dispatch} active={view === 'student'} />
       </section>
       <section hidden={view !== 'manager' && view !== 'manager-page'} aria-labelledby="manager-heading">
-        {view !== 'student' && <ManagerCatalog {...inventory} onSaved={() => { dispatch({ type: 'cancel' }); setInventoryVersion((version) => version + 1); }} onStudent={() => setView('student')} onPage={(isPage) => setView(isPage ? 'manager-page' : 'manager')} />}
+        {view !== 'student' && (staff ? <ManagerCatalog {...inventory} onSaved={() => { dispatch({ type: 'cancel' }); setInventoryVersion((version) => version + 1); }} onStudent={() => setView('student')} onPage={(isPage) => setView(isPage ? 'manager-page' : 'manager')} /> : <StaffLogin />)}
       </section>
     </main>
     <footer className="app-footer">Campus Checkout <span>Find your essentials. Make them yours.</span></footer>
