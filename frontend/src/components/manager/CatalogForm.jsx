@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { createItem, updateItem, deleteItem, fetchCategories } from '../../api.js';
+import * as api from '../../api.js';
+import { saveCatalogItem } from '../../utils/catalog.js';
 
 import { prepareMultiBuy } from '../../utils/cart.js';
 
@@ -23,7 +24,7 @@ export default function CatalogForm({ action, onBack, onSaved, embedded = false,
   const [categories, setCategories] = useState([]);
   useEffect(() => {
     const controller = new AbortController();
-    fetchCategories(controller.signal).then(setCategories).catch(() => {});
+    api.fetchCategories(controller.signal).then(setCategories).catch(() => {});
     return () => controller.abort();
   }, []);
   async function submit(event) {
@@ -43,17 +44,16 @@ export default function CatalogForm({ action, onBack, onSaved, embedded = false,
       !Number.isSafeInteger(item.stock_quantity) || item.stock_quantity < 0 || !Number.isFinite(item.tax_rate) || item.tax_rate < 0 || item.tax_rate > 1)) {
       setMessage('Enter a name, category, valid price, whole-number stock, and tax rate between 0 and 1.'); return;
     }
+    let deal = null;
     if (item) {
       try {
-        const deal = prepareMultiBuy(values.multi_buy_quantity, values.multi_buy_price, Math.round(item.unit_price * 100));
-        item.multi_buy_quantity = deal?.quantity ?? null;
-        item.multi_buy_price = deal ? deal.priceCents / 100 : null;
+        deal = prepareMultiBuy(values.multi_buy_quantity, values.multi_buy_price, Math.round(item.unit_price * 100));
       } catch (error) { setMessage(error.message); return; }
     }
     setBusy(true); onBusyChange?.(true); setMessage('Saving...');
     try {
-      const result = action === 'add' ? await createItem(item) : action === 'edit' ? await updateItem(id, item) : await deleteItem(id);
-      setMessage(action === 'add' ? `Item created. Assigned ID: ${result.item_id}.` : result.message);
+      const result = await saveCatalogItem(action, id, item, deal, api);
+      setMessage(result.message);
       form.reset(); onSaved();
     } catch (error) { setMessage(error.message); }
     finally { setBusy(false); onBusyChange?.(false); }
