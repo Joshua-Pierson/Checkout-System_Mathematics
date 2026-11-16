@@ -26,6 +26,7 @@ function transactionReducer(state, action) {
 
 export default function App() {
   const { staff, logout } = useStaffAuth();
+  const [pricingVersion, setPricingVersion] = useState(0);
   const [view, setView] = useState('student');
   const [inventoryVersion, setInventoryVersion] = useState(0);
   const [inventory, setInventory] = useState({ catalog: [], status: 'loading', error: '' });
@@ -59,11 +60,11 @@ export default function App() {
     </div>}
     <main>
       <section hidden={view !== 'student'} aria-labelledby="cart-heading">
-        <StudentCart {...inventory} cart={transaction.cart} message={transaction.message}
+        <StudentCart pricingVersion={pricingVersion} {...inventory} cart={transaction.cart} message={transaction.message}
           dispatch={dispatch} active={view === 'student'} />
       </section>
       <section hidden={view !== 'manager' && view !== 'manager-page'} aria-labelledby="manager-heading">
-        {view !== 'student' && (staff ? <ManagerCatalog {...inventory} onSaved={() => { dispatch({ type: 'cancel' }); setInventoryVersion((version) => version + 1); }} onStudent={() => setView('student')} onPage={(isPage) => setView(isPage ? 'manager-page' : 'manager')} /> : <StaffLogin />)}
+        {view !== 'student' && (staff ? <ManagerCatalog onDiscountsSaved={() => setPricingVersion((version) => version + 1)} {...inventory} onSaved={() => { dispatch({ type: 'cancel' }); setInventoryVersion((version) => version + 1); }} onStudent={() => setView('student')} onPage={(isPage) => setView(isPage ? 'manager-page' : 'manager')} /> : <StaffLogin />)}
       </section>
     </main>
     <footer className="app-footer">Campus Checkout <span>Find your essentials. Make them yours.</span></footer>

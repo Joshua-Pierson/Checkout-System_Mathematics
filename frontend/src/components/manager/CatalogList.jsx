@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { money } from '../../utils/cart.js';
 
-export default function CatalogList({ catalog = [], status, error }) {
+export default function CatalogList({ catalog = [], status, error, eligibility }) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('');
   const categories = [...new Set(catalog.map((item) => item.category))].sort((a, b) => a.localeCompare(b));
@@ -26,13 +26,22 @@ export default function CatalogList({ catalog = [], status, error }) {
     <p role="status" aria-live="polite">{message}</p>
     {ready && <div className="table-scroll" tabIndex="0" role="region" aria-label="Manager catalog products">
       <table><caption className="sr-only">Current catalog with product codes, prices, categories, and stock quantities</caption>
-        <thead><tr>{['Code', 'Product', 'Price', 'Category', 'Stock'].map((heading) => <th key={heading} scope="col">{heading}</th>)}</tr></thead>
+        <thead><tr>{['Code', 'Product', 'Price', 'Category', 'Stock', ...(eligibility ? ['Student Discount', 'Employee Discount'] : [])].map((heading) => <th key={heading} scope="col">{heading}</th>)}</tr></thead>
         <tbody>{matches.map((product) => <tr key={product.code}>
           <td><span className="item-code">{product.code}</span></td>
           <td className="product-name">{product.name}</td>
           <td className="price-cell">{money(product.priceCents)}{product.multiBuy && <small className="deal-label">{product.multiBuy.quantity} for {money(product.multiBuy.priceCents)}</small>}</td>
           <td><span className="category-pill">{product.category}</span></td>
           <td>{product.stock === 0 ? 'Out of stock' : product.stock}</td>
+          {eligibility && ['student_eligible', 'employee_eligible'].map((field) => {
+            const settings = eligibility.rows.find((row) => row.category === product.category);
+            const label = field === 'student_eligible' ? 'Student discount' : 'Employee discount';
+            return <td key={field} className="eligibility-checkbox-cell"><input type="checkbox"
+              aria-label={`${label} for ${product.name} (${product.category})`}
+              title={`Applies to every product in ${product.category}`}
+              disabled={eligibility.disabled || !settings} checked={settings?.[field] ?? false}
+              onChange={(event) => eligibility.onChange(product.category, field, event.target.checked)} /></td>;
+          })}
         </tr>)}</tbody>
       </table>
     </div>}

@@ -7,7 +7,7 @@ import CheckoutReceipt from './CheckoutReceipt.jsx';
 import CourseLookup from './CourseLookup.jsx';
 import { calculateCart } from '../api.js';
 
-export default function StudentCart({ catalog, status, error, cart, message, dispatch, active }) {
+export default function StudentCart({ catalog, status, error, cart, message, dispatch, active, pricingVersion = 0 }) {
   const [selections, setSelections] = useState({});
   const [busy, setBusy] = useState(false);
   const [removalItem, setRemovalItem] = useState(null);
@@ -25,16 +25,16 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
     calculateCart(cart, studentId.trim(), controller.signal, employeeId.trim()).then((result) => {
       if (!controller.signal.aborted) {
         confirmMultiBuy(cart, result);
-        setTotals({ ...result, cart, studentId: studentId.trim(), employeeId: employeeId.trim(), status: 'ready' });
+        setTotals({ ...result, cart, studentId: studentId.trim(), employeeId: employeeId.trim(), pricingVersion, status: 'ready' });
       }
     }).catch((error) => {
       if (!controller.signal.aborted) setTotals({ cart, status: 'error', error: error.message });
     });
     
     return () => controller.abort();
-  }, [cart, studentId, employeeId]);
+  }, [cart, studentId, employeeId, pricingVersion]);
 
-  const totalsReady = totals.cart === cart && totals.status === 'ready' && (!cart.length || (totals.studentId === studentId.trim() && totals.employeeId === employeeId.trim()));
+  const totalsReady = totals.cart === cart && totals.status === 'ready' && (!cart.length || (totals.studentId === studentId.trim() && totals.employeeId === employeeId.trim() && totals.pricingVersion === pricingVersion));
 
   const [code, setCode] = useState('');
   const [category, setCategory] = useState('');
@@ -196,7 +196,7 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
           <p className="grand-total"><span>Total</span><strong>${Number(totals.total).toFixed(2)}</strong></p>
         </> : <p className="helper-text">{totals.cart === cart && totals.status === 'error' ? totals.error : 'Calculating total...'}</p>}</div>
         
-        <CheckoutReceipt key={JSON.stringify([cart, studentId.trim(), employeeId.trim()])} studentId={studentId.trim()} employeeId={employeeId.trim()} cart={cart} totalsReady={totalsReady} busy={busy} setBusy={setBusy} />
+        <CheckoutReceipt key={JSON.stringify([cart, studentId.trim(), employeeId.trim(), pricingVersion])} studentId={studentId.trim()} employeeId={employeeId.trim()} cart={cart} totalsReady={totalsReady} busy={busy} setBusy={setBusy} />
         <button id="cancel-transaction" className="cancel-transaction" type="button" disabled={!cart.length && !studentId && !employeeId} onClick={cancel}>Cancel transaction</button>
       </aside>
     </fieldset>

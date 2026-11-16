@@ -64,7 +64,7 @@ export const checkoutCard = (cart, cardNumber, studentId, employeeId) => request
 // --- Discount & Bundle Management Endpoints ---
 
 export const fetchDiscountEligibilities = (signal) => request('/api/discounts/categories', { signal }).then(r => r.data);
-export const updateDiscountEligibility = (category, data) => request(`/api/discounts/categories/${category}`, { method: 'PUT', body: data });
+export const updateDiscountEligibility = (category, data) => request(`/api/discounts/categories/${encodeURIComponent(category)}`, { method: 'PUT', body: data });
 
 export const fetchDiscountRules = (signal) => request('/api/discounts/rules', { signal }).then(r => r.data);
 export const updateDiscountRule = (profile, data) => request(`/api/discounts/rules/${profile}`, { method: 'PUT', body: data });
