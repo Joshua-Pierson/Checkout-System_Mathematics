@@ -1,3 +1,4 @@
+import { useStaffAuth } from '../StaffAuth.jsx';
 import StaffRemovalDialog from './StaffRemovalDialog.jsx';
 import { APPAREL_SIZES, APPAREL_COLORS, isApparel, cartKey, productQuantity, selectionLineTotal } from '../utils/apparel.js';
 import { useEffect, useRef, useState } from 'react';
@@ -8,6 +9,12 @@ import CourseLookup from './CourseLookup.jsx';
 import { calculateCart } from '../api.js';
 
 export default function StudentCart({ catalog, status, error, cart, message, dispatch, active, pricingVersion = 0 }) {
+  const { staff } = useStaffAuth();
+  function removeItem(item) {
+    if (busy) return;
+    if (staff) { setRemovalItem(item); setBusy(true); }
+    else dispatch({ type: 'remove', key: cartKey(item) });
+  }
   const [selections, setSelections] = useState({});
   const [busy, setBusy] = useState(false);
   const [removalItem, setRemovalItem] = useState(null);
@@ -181,7 +188,7 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
                   <span aria-label={`Quantity ${item.quantity}`}>{item.quantity}</span>
                   <button type="button" aria-label={`Increase ${item.name} quantity`} disabled={productQuantity(cart, item.code) >= item.stock} onClick={() => add(item.code, item)}>+</button>
                 </div>
-                <button className="remove-item" type="button" onClick={() => { setRemovalItem(item); setBusy(true); }} aria-label={`Remove ${item.name} from cart`}>Remove</button>
+                <button className="remove-item" type="button" onClick={() => removeItem(item)} aria-label={`Remove ${item.name} from cart`}>Remove</button>
               </div>
             </div>;
           })}
