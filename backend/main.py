@@ -736,5 +736,46 @@ def lookup_course_bundle(course_code):
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route("/api/bundles", methods=["POST"])
+def create_course_supply_bundle():
+    data = request.get_json(silent=True)
+
+    if not isinstance(data, dict):
+        return jsonify({
+            "status": "error",
+            "message": "Send a bundle name and items."
+        }), 400
+
+    try:
+        course_code = course_dao_manager.create_course_bundle(
+            data.get("name"),
+            data.get("items")
+        )
+
+        return jsonify({
+            "status": "success",
+            "message": f"Bundle {course_code} saved.",
+            "course_code": course_code
+        }), 201
+
+    except FileExistsError as error:
+        return jsonify({
+            "status": "error",
+            "message": str(error)
+        }), 409
+
+    except ValueError as error:
+        return jsonify({
+            "status": "error",
+            "message": str(error)
+        }), 400
+
+    except Exception:
+        app.logger.exception("Could not create course bundle")
+        return jsonify({
+            "status": "error",
+            "message": "Could not save the bundle. Check backend logs."
+        }), 500
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
