@@ -10,6 +10,7 @@ from discount_dao import DiscountDAO
 from course_dao import CourseDAO
 from auth_service import AuthService
 from audit_dao import AuditDAO
+from apparel_variants import list_variants, check_variant, decrement_variant
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}})
@@ -38,6 +39,24 @@ def get_inventory():
             item["unit_price"] = float(item["unit_price"])
             item["tax_rate"] = float(item["tax_rate"])
         return jsonify({"status": "success", "data": items})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if "cursor" in locals(): cursor.close()
+        if "conn" in locals() and conn.is_connected(): conn.close()
+
+@app.route("/api/items/<int:item_id>/variants", methods=["GET"])
+def get_item_variants(item_id):
+    """Sizes and colors for one apparel item, each with its own stock."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT item_id, name FROM inventory WHERE item_id = %s", (item_id,))
+        item = cursor.fetchone()
+        if not item:
+            return jsonify({"status": "error", "message": f"Item {item_id} not found."}), 404
+        return jsonify({"status": "success", "item_id": item_id, "name": item["name"],
+                        "data": list_variants(cursor, item_id)})
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
@@ -212,13 +231,20 @@ def process_cash_checkout():
             if int(db_item["stock_quantity"]) < quantity:
                 return jsonify({"status": "error", "message": f"Insufficient stock for item {item_id}."}), 409
 
+            variant, variant_error, variant_status = check_variant(cursor, item_id, req_item.get("variant_id"), quantity)
+            if variant_error:
+                return jsonify({"status": "error", "message": variant_error}), variant_status
+            line_name = db_item["name"]
+            if variant:
+                line_name = f'{db_item["name"]} ({variant["color"]}, {variant["size"]})'
             price = float(db_item["unit_price"])
             rule = multibuy_rules.get(item_id)
             line_tot, bundle_applied = apply_multibuy(price, quantity, rule)
 
             receipt_items.append({
                 "item_id": item_id,
-                "name": db_item["name"],
+                "variant_id": variant["variant_id"] if variant else None,
+                "name": line_name,
                 "category": db_item["category"],
                 "quantity": quantity,
                 "price": price,
@@ -248,6 +274,8 @@ def process_cash_checkout():
 
         for item in receipt_items:
             dao.decrement_stock(item["item_id"], item["quantity"])
+            if item.get("variant_id"):
+                decrement_variant(conn, item["variant_id"], item["quantity"])
 
         change_due = round(cash_tendered - total_due, 2)
 
@@ -317,13 +345,20 @@ def process_card_checkout():
             if int(db_item["stock_quantity"]) < quantity:
                 return jsonify({"status": "error", "message": f"Insufficient stock for item {item_id}."}), 409
 
+            variant, variant_error, variant_status = check_variant(cursor, item_id, req_item.get("variant_id"), quantity)
+            if variant_error:
+                return jsonify({"status": "error", "message": variant_error}), variant_status
+            line_name = db_item["name"]
+            if variant:
+                line_name = f'{db_item["name"]} ({variant["color"]}, {variant["size"]})'
             price = float(db_item["unit_price"])
             rule = multibuy_rules.get(item_id)
             line_tot, bundle_applied = apply_multibuy(price, quantity, rule)
 
             receipt_items.append({
                 "item_id": item_id,
-                "name": db_item["name"],
+                "variant_id": variant["variant_id"] if variant else None,
+                "name": line_name,
                 "category": db_item["category"],
                 "quantity": quantity,
                 "price": price,
@@ -349,6 +384,8 @@ def process_card_checkout():
 
         for item in receipt_items:
             dao.decrement_stock(item["item_id"], item["quantity"])
+            if item.get("variant_id"):
+                decrement_variant(conn, item["variant_id"], item["quantity"])
 
         receipt_data = generate_receipt(
             cart_items=receipt_items,
