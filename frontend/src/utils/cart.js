@@ -1,3 +1,4 @@
+import { isApparel, APPAREL_SIZES, APPAREL_COLORS, cartKey, productQuantity } from './apparel.js';
 export const money = (cents) => `$${(cents / 100).toFixed(2)}`;
 
 export function prepareProduct(product) {
@@ -28,19 +29,34 @@ export function prepareInventory(products) {
   return catalog;
 }
 
-export function addToCart(cart, catalog, code) {
+export function addToCart(cart, catalog, code, selection = {}) {
   const product = catalog.find((item) => item.code === code);
   if (!product) return { cart, error: `No product found for code "${code}".` };
-  const quantity = cart.find((item) => item.code === code)?.quantity || 0;
+  const chosen = isApparel(product) ? { size: selection.size, color: selection.color } : {};
+  if (isApparel(product) && (!APPAREL_SIZES.includes(chosen.size) || !APPAREL_COLORS.includes(chosen.color))) {
+    return { cart, error: `Choose a size and color for ${product.name} in the catalog before adding it.` };
+  }
+  const quantity = productQuantity(cart, code);
   if (quantity >= product.stock) return { cart, error: product.stock === 0
-    ? `${product.name} is out of stock.` : `Only ${product.stock} of ${product.name} are available.` };
-  const next = quantity ? cart.map((item) => item.code === code ? { ...item, quantity: quantity + 1 } : item)
-    : [...cart, { ...product, quantity: 1 }];
-  return { cart: next, message: `${product.name} added to the cart.` };
+    ? `${product.name} is out of stock.` : `Only ${product.stock} of ${product.name} are available across all selections.` };
+  const key = cartKey({ ...product, ...chosen });
+  const existing = cart.find((item) => cartKey(item) === key);
+  const next = existing ? cart.map((item) => cartKey(item) === key ? { ...item, quantity: item.quantity + 1 } : item)
+    : [...cart, { ...product, ...chosen, quantity: 1 }];
+  return { cart: next, message: `${product.name}${chosen.size ? ` (${chosen.size}, ${chosen.color})` : ''} added to the cart.` };
+}
+
+function productLines(cart) {
+  const grouped = new Map();
+  for (const item of cart) {
+    if (grouped.has(item.code)) grouped.get(item.code).quantity += item.quantity;
+    else grouped.set(item.code, { ...item });
+  }
+  return [...grouped.values()];
 }
 
 export function cartTotal(cart) {
-  return cart.reduce((sum, item) => sum + linePricing(item).totalCents, 0);
+  return productLines(cart).reduce((sum, item) => sum + linePricing(item).totalCents, 0);
 }
 
 export function calculateChange(totalCents, paidCents) {
@@ -76,7 +92,7 @@ export function linePricing(item) {
 }
 
 export function multiBuySavings(cart) {
-  return cart.reduce((sum, item) => sum + linePricing(item).savingsCents, 0);
+  return productLines(cart).reduce((sum, item) => sum + linePricing(item).savingsCents, 0);
 }
 
 export function confirmMultiBuy(cart, result) {

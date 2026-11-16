@@ -23,8 +23,8 @@ test('deal-only save skips item update and clearing deletes existing rule', asyn
 });
 test('changed catalog fields save separately from deal', async () => {
   const { api, calls } = fixture();
-  await saveCatalogItem('edit', 1003, { ...item, unit_price: 4 }, { quantity: 3, priceCents: 900 }, api);
-  assert.deepEqual(calls, [['updateItem', 1003, { unit_price: 4 }], ['updateBundle', 1003, { trigger_quantity: 3, bundle_price: 9 }]]);
+  await saveCatalogItem('edit', 1003, { ...item, stock_quantity: 99 }, { quantity: 3, priceCents: 900 }, api);
+  assert.deepEqual(calls, [['updateItem', 1003, { stock_quantity: 99 }], ['updateBundle', 1003, { trigger_quantity: 3, bundle_price: 9 }]]);
 });
 test('missing item and partial failure remain errors', async () => {
   const { api } = fixture();

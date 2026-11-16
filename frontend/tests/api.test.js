@@ -1,11 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-
-// Replace Vite's build-time environment expression for Node's test runner.
-const source = (await readFile(new URL('../src/api.js', import.meta.url), 'utf8'))
-  .replace('import.meta.env.VITE_API_BASE_URL', 'undefined');
-const api = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+import * as api from '../src/api.js';
 
 test('requests match Flask routes, payloads, response envelope, and errors', async () => {
   const original = globalThis.fetch;
@@ -52,7 +47,7 @@ test('staff login sends credentials to Flask and returns the authenticated staff
     };
   };
   try {
-    const result = await api.loginStaff('ADMIN', '1234');
+    const result = await api.staffLogin('ADMIN', '1234');
     assert.deepEqual(result.staff, { staff_id: 'ADMIN', name: 'System Admin', role: 'manager' });
     assert.equal(new URL(calls[0].url).pathname, '/api/auth/login');
     assert.equal(calls[0].method, 'POST');
@@ -62,7 +57,7 @@ test('staff login sends credentials to Flask and returns the authenticated staff
       status: 401,
       json: async () => ({ status: 'error', message: 'Authentication failed: Invalid Staff ID or PIN.' }),
     });
-    await assert.rejects(api.loginStaff('ADMIN', 'wrong'), /Authentication failed: Invalid Staff ID or PIN/);
+    await assert.rejects(api.staffLogin('ADMIN', 'wrong'), /Authentication failed: Invalid Staff ID or PIN/);
   } finally { globalThis.fetch = original; }
 });
 
@@ -78,7 +73,7 @@ test('staff item removal sends credentials and item ID to the backend override r
     };
   };
   try {
-    const result = await api.authorizeItemRemoval('ADMIN', '1234', 1003);
+    const result = await api.authorizeItemRemoval(1003, 'ADMIN', '1234');
     assert.equal(result.authorized_by, 'System Admin');
     assert.equal(new URL(calls[0].url).pathname, '/api/cart/override/item');
     assert.equal(calls[0].method, 'DELETE');

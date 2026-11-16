@@ -1,3 +1,4 @@
+import { aggregateCart } from './utils/apparel.js';
 const baseUrl = 'http://localhost:5001';
 
 async function request(path, { signal, method = 'GET', body } = {}) {
@@ -15,7 +16,9 @@ async function request(path, { signal, method = 'GET', body } = {}) {
   try { result = await response.json(); }
   catch { throw new Error(`Backend returned an invalid response (${response.status}).`); }
   if (!response.ok || result.status !== 'success') {
-    throw new Error(result.message || `Request failed (${response.status}).`);
+    const error = new Error(result.message || `Request failed (${response.status}).`);
+    error.status = response.status;
+    throw error;
   }
   return result;
 }
@@ -31,14 +34,7 @@ export async function fetchCategories(signal) {
 export const createItem = (item) => request('/api/items', { method: 'POST', body: item });
 export const updateItem = (id, item) => request(`/api/items/${id}`, { method: 'PUT', body: item });
 export const deleteItem = (id) => request(`/api/items/${id}`, { method: 'DELETE' });
-export const loginStaff = (staffId, pin) => request('/api/auth/login', {
-  method: 'POST', body: { staff_id: staffId, pin },
-});
-export const authorizeItemRemoval = (staffId, pin, itemId) => request('/api/cart/override/item', {
-  method: 'DELETE', body: { staff_id: staffId, pin, item_id: itemId },
-});
-
-const cartItems = (cart) => cart.map((item) => ({ item_id: Number(item.code), quantity: item.quantity }));
+const cartItems = aggregateCart;
 
 export const calculateCart = (cart, studentId, signal, employeeId) => request('/api/cart/calculate', { 
   method: 'POST', body: { items: cartItems(cart), student_id: studentId, employee_id: employeeId }, signal 
@@ -67,7 +63,7 @@ export const checkoutCard = (cart, cardNumber, studentId, employeeId) => request
 // --- Discount & Bundle Management Endpoints ---
 
 export const fetchDiscountEligibilities = (signal) => request('/api/discounts/categories', { signal }).then(r => r.data);
-export const updateDiscountEligibility = (category, data) => request(`/api/discounts/categories/${category}`, { method: 'PUT', body: data });
+export const updateDiscountEligibility = (category, data) => request(`/api/discounts/categories/${encodeURIComponent(category)}`, { method: 'PUT', body: data });
 
 export const fetchDiscountRules = (signal) => request('/api/discounts/rules', { signal }).then(r => r.data);
 export const updateDiscountRule = (profile, data) => request(`/api/discounts/rules/${profile}`, { method: 'PUT', body: data });
@@ -95,3 +91,14 @@ export async function validateCourseBundle(courseCode, signal) {
   }
   return result;
 }
+
+export const authorizePriceChange = (data) => request('/api/cart/override/price', {
+  method: 'PUT', body: data,
+});
+
+export const staffLogin = (staffId, pin) => request('/api/auth/login', {
+  method: 'POST', body: { staff_id: staffId.trim(), pin },
+});
+export const authorizeItemRemoval = (itemId, staffId, pin) => request('/api/cart/override/item', {
+  method: 'DELETE', body: { item_id: Number(itemId), staff_id: staffId.trim(), pin },
+});

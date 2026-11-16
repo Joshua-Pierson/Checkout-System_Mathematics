@@ -39,3 +39,8 @@ section[aria-labelledby='manager-heading'] .bundle-form fieldset { display: flex
 .bundle-row select { width: 100%; }
 .bundle-buttons { display: flex; flex-wrap: wrap; gap: 12px; }
 @media (max-width: 600px) { .bundle-row { grid-template-columns: 1fr; } }
+
+.eligibility-fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.eligibility-fieldset input[type="checkbox"] { width: 22px; height: 22px; min-width: 22px; padding: 0; accent-color: #176b47; cursor: pointer; }
+.eligibility-checkbox-cell { text-align: center; }
+.eligibility-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }

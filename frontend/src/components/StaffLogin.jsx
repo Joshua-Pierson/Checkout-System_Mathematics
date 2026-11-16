@@ -1,50 +1,36 @@
-import { useState } from 'react';
-import { loginStaff } from '../api.js';
-
-export default function StaffLogin({ onLogin, onStudent }) {
-  const [staffId, setStaffId] = useState('');
-  const [pin, setPin] = useState('');
+import { useRef, useState } from 'react';
+import { useStaffAuth } from '../StaffAuth.jsx';
+export default function StaffLogin({ onBusyChange } = {}) {
+  const { login } = useStaffAuth();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-
+  const [message, setMessage] = useState('');
+  const pending = useRef(false);
   async function submit(event) {
     event.preventDefault();
-    if (busy) return;
-
-    setBusy(true);
-    setError('');
-    try {
-      const result = await loginStaff(staffId.trim(), pin);
-      if (!result.staff?.staff_id) throw new Error('The backend returned an invalid staff profile.');
-      onLogin(result.staff);
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setBusy(false);
+    if (pending.current) return;
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const id = String(data.get('staff_id') || '').trim();
+    const pin = String(data.get('pin') || '');
+    if (!id || !pin.trim()) { setMessage('Enter your staff ID and PIN.'); return; }
+    pending.current = true; setBusy(true); onBusyChange?.(true); setMessage('Checking staff credentials...');
+    try { await login(id, pin); }
+    catch (error) { setMessage(error.message); }
+    finally {
+      form.elements.namedItem('pin').value = '';
+      pending.current = false; setBusy(false); onBusyChange?.(false);
     }
   }
-
-  return <>
-    <p className="eyebrow">STAFF ACCESS</p>
-    <h1 id="manager-heading">Staff Login</h1>
-    <p>Sign in with your staff ID and PIN to open the manager workspace.</p>
-    <form className="staff-login-form" onSubmit={submit}>
-      <div>
-        <label htmlFor="staff-login-id">Staff ID</label>
-        <input id="staff-login-id" name="staff_id" autoComplete="username" required
-          value={staffId} onChange={(event) => setStaffId(event.target.value)} />
-      </div>
-      <div>
-        <label htmlFor="staff-login-pin">PIN</label>
-        <input id="staff-login-pin" name="pin" type="password" inputMode="numeric"
-          autoComplete="current-password" required value={pin}
-          onChange={(event) => setPin(event.target.value)} />
-      </div>
-      {error && <p className="staff-login-error" role="alert">{error}</p>}
-      <button type="submit" disabled={busy}>{busy ? 'Signing in...' : 'Sign in'}</button>
-      <button className="manager-student-return" type="button" disabled={busy} onClick={onStudent}>
-        Back to Student View
-      </button>
+  return <section className="staff-login-panel" aria-label="Staff login">
+    <h2>Staff login</h2>
+    <p>Sign in before using Manager tools or performing overrides. You’ll be signed out when this page is refreshed.</p>
+    <form onSubmit={submit} autoComplete="off">
+      <fieldset disabled={busy}>
+        <label>Staff ID<input name="staff_id" type="text" autoComplete="off" required /></label>
+        <label>Staff PIN<input name="pin" type="password" autoComplete="off" required /></label>
+        <button type="submit">{busy ? 'Signing in...' : 'Sign in'}</button>
+      </fieldset>
     </form>
-  </>;
+    <p role="status" aria-live="polite">{message}</p>
+  </section>;
 }

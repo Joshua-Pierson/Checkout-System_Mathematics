@@ -1,5 +1,5 @@
 // Compare against current server values so an unchanged SQL UPDATE is unnecessary.
-export async function saveCatalogItem(action, id, item, deal, api) {
+export async function saveCatalogItem(action, id, item, deal, api, priceApproval = {}) {
   if (action === 'remove') return api.deleteItem(id);
   let itemChanged = false;
   let assignedId = id;
@@ -14,8 +14,23 @@ export async function saveCatalogItem(action, id, item, deal, api) {
     if (!original) throw new Error(`Item ${id} not found. Refresh the catalog and check the ID.`);
     const changes = Object.fromEntries(Object.entries(item).filter(([key, value]) =>
       typeof value === 'number' ? Number(original[key]) !== value : original[key] !== value));
+    const changingPrice = 'unit_price' in changes;
+    if (changingPrice) {
+      if (!priceApproval.authorize) throw new Error('Staff login is required to change a price.');
+      if (!priceApproval.reason?.trim()) throw new Error('Enter a reason for the price change.');
+      const cents = item.unit_price * 100;
+      if (!Number.isFinite(cents) || item.unit_price < 0 || !Number.isSafeInteger(Math.round(cents)) || Math.abs(cents - Math.round(cents)) > 0.000001) {
+        throw new Error('Enter a nonnegative price with no more than two decimal places.');
+      }
+      await priceApproval.authorize({ item_id: Number(id), original_price: Number(original.unit_price),
+        new_price: item.unit_price, reason: priceApproval.reason.trim() });
+    }
     if (Object.keys(changes).length) {
-      await api.updateItem(id, changes);
+      try { await api.updateItem(id, changes); }
+      catch (error) {
+        if (changingPrice) throw new Error(`Price approval was recorded, but the catalog update did not complete: ${error.message} Refresh the catalog before retrying.`);
+        throw error;
+      }
       itemChanged = true;
     }
   }

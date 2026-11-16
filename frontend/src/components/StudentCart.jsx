@@ -1,16 +1,24 @@
+import { useStaffAuth } from '../StaffAuth.jsx';
+import StaffRemovalDialog from './StaffRemovalDialog.jsx';
+import { APPAREL_SIZES, APPAREL_COLORS, isApparel, cartKey, productQuantity, selectionLineTotal } from '../utils/apparel.js';
 import { useEffect, useRef, useState } from 'react';
 import { money, linePricing, multiBuySavings, confirmMultiBuy } from '../utils/cart.js';
 import { discountLabel } from '../utils/discounts.js';
 import CheckoutReceipt from './CheckoutReceipt.jsx';
 import CourseLookup from './CourseLookup.jsx';
-import { authorizeItemRemoval, calculateCart } from '../api.js';
+import { calculateCart } from '../api.js';
 
-export default function StudentCart({ catalog, status, error, cart, message, dispatch, active, staff }) {
+export default function StudentCart({ catalog, status, error, cart, message, dispatch, active, pricingVersion = 0 }) {
+  const { staff } = useStaffAuth();
+  function removeItem(item) {
+    if (busy) return;
+    if (staff) { setRemovalItem(item); setBusy(true); }
+    else dispatch({ type: 'remove', key: cartKey(item) });
+  }
+  const [selections, setSelections] = useState({});
   const [busy, setBusy] = useState(false);
-  const [overrideBusy, setOverrideBusy] = useState(false);
-  const [overrideItem, setOverrideItem] = useState(null);
-  const [overridePin, setOverridePin] = useState('');
-  const [overrideError, setOverrideError] = useState('');
+  const [removalItem, setRemovalItem] = useState(null);
+  function closeRemoval() { setRemovalItem(null); setBusy(false); }
   const [studentId, setStudentId] = useState('');
   const [employeeId, setEmployeeId] = useState('');
   const [totals, setTotals] = useState({ cart: null, status: 'idle' });
@@ -24,16 +32,16 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
     calculateCart(cart, studentId.trim(), controller.signal, employeeId.trim()).then((result) => {
       if (!controller.signal.aborted) {
         confirmMultiBuy(cart, result);
-        setTotals({ ...result, cart, studentId: studentId.trim(), employeeId: employeeId.trim(), status: 'ready' });
+        setTotals({ ...result, cart, studentId: studentId.trim(), employeeId: employeeId.trim(), pricingVersion, status: 'ready' });
       }
     }).catch((error) => {
       if (!controller.signal.aborted) setTotals({ cart, status: 'error', error: error.message });
     });
     
     return () => controller.abort();
-  }, [cart, studentId, employeeId]);
+  }, [cart, studentId, employeeId, pricingVersion]);
 
-  const totalsReady = totals.cart === cart && totals.status === 'ready' && (!cart.length || (totals.studentId === studentId.trim() && totals.employeeId === employeeId.trim()));
+  const totalsReady = totals.cart === cart && totals.status === 'ready' && (!cart.length || (totals.studentId === studentId.trim() && totals.employeeId === employeeId.trim() && totals.pricingVersion === pricingVersion));
 
   const [code, setCode] = useState('');
   const [category, setCategory] = useState('');
@@ -50,45 +58,20 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
     : !catalog.length ? 'No products are available.' : !matches.length ? 'No items match your search or selected category.'
     : `${matches.length} product${matches.length === 1 ? '' : 's'} found.`;
 
-  function add(itemCode) { if (ready && !busy) dispatch({ type: 'add', code: itemCode, catalog }); }
+  function add(itemCode, selection = selections[itemCode] || {}) { if (ready && !busy) dispatch({ type: 'add', code: itemCode, catalog, selection }); }
 
   function submit(event) {
     event.preventDefault();
     const itemCode = code.trim();
     const product = catalog.find((item) => item.code === itemCode);
-    const quantity = cart.find((item) => item.code === itemCode)?.quantity || 0;
+    const quantity = productQuantity(cart, itemCode);
     add(itemCode);
-    if (product && quantity < product.stock) setCode('');
+    if (product && quantity < product.stock && (!isApparel(product) || (selections[itemCode]?.size && selections[itemCode]?.color))) setCode('');
     codeInput.current?.focus();
   }
 
   function cancel() {
-    dispatch({ type: 'cancel' }); setCode(''); setCategory(''); setQuery(''); setStudentId(''); setEmployeeId(''); codeInput.current?.focus();
-  }
-
-  async function submitStaffRemoval(event, item) {
-    event.preventDefault();
-    if (!staff || overrideBusy) return;
-
-    setOverrideBusy(true);
-    setOverrideError('');
-    try {
-      const result = await authorizeItemRemoval(staff.staff_id, overridePin, Number(item.code));
-      if (typeof result.authorized_by !== 'string' || !result.authorized_by) {
-        throw new Error('The backend did not confirm staff authorization.');
-      }
-      dispatch({
-        type: 'remove',
-        code: item.code,
-        message: `${item.name} removed and logged by ${result.authorized_by}.`,
-      });
-      setOverrideItem(null);
-      setOverridePin('');
-    } catch (requestError) {
-      setOverrideError(requestError.message);
-    } finally {
-      setOverrideBusy(false);
-    }
+    dispatch({ type: 'cancel' }); setCode(''); setCategory(''); setQuery(''); setStudentId(''); setEmployeeId(''); setSelections({}); codeInput.current?.focus();
   }
 
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -99,7 +82,7 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
         <p>Everything you need, all in one place.</p></div>
       <span className="page-tag">STUDENT CHECKOUT</span>
     </div>
-    <fieldset className="student-workspace" disabled={busy || overrideBusy}>
+    <fieldset className="student-workspace" disabled={busy}>
       <div className="catalog-column">
         <section className="student-id-card" aria-labelledby="student-details-heading">
           <div><span className="small-kicker">LET S START HERE</span><h2 id="student-details-heading">Your discount details</h2>
@@ -143,10 +126,22 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
             <table><caption className="sr-only">Choose a category or search, then add an item</caption>
               <thead><tr>{['Code','Product','Price','Category',''].map((heading, index) => <th scope="col" key={index}>{heading || <span className="sr-only">Action</span>}</th>)}</tr></thead>
               <tbody id="product-list">{matches.map((product) => {
-                const quantity = cart.find((item) => item.code === product.code)?.quantity || 0;
+                const quantity = productQuantity(cart, product.code);
                 return <tr key={product.code}><td><span className="item-code">{product.code}</span></td><td className="product-name">{product.name}</td>
                   <td className="price-cell">{money(product.priceCents)}{product.multiBuy && <small className="deal-label">{product.multiBuy.quantity} for {money(product.multiBuy.priceCents)}</small>}</td><td><span className="category-pill">{product.category}</span></td>
-                  <td><button className="add-product" type="button" aria-label={`Add ${product.name} to cart`} disabled={quantity >= product.stock} onClick={() => add(product.code)}>
+                  <td>{isApparel(product) && <div className="apparel-picker">
+                    <label htmlFor={`size-${product.code}`}>Size</label>
+                    <select id={`size-${product.code}`} value={selections[product.code]?.size || ''} disabled={product.stock === 0}
+                      onChange={(event) => setSelections((previous) => ({ ...previous, [product.code]: { ...previous[product.code], size: event.target.value } }))}>
+                      <option value="">Choose size</option>{APPAREL_SIZES.map((size) => <option key={size}>{size}</option>)}
+                    </select>
+                    <label htmlFor={`color-${product.code}`}>Color</label>
+                    <select id={`color-${product.code}`} value={selections[product.code]?.color || ''} disabled={product.stock === 0}
+                      onChange={(event) => setSelections((previous) => ({ ...previous, [product.code]: { ...previous[product.code], color: event.target.value } }))}>
+                      <option value="">Choose color</option>{APPAREL_COLORS.map((color) => <option key={color}>{color}</option>)}
+                    </select>
+                    <small>Size/color availability is not verified. Stock shown is for the whole product.</small>
+                  </div>}<button className="add-product" type="button" aria-label={`Add ${product.name} to cart`} disabled={quantity >= product.stock} onClick={() => add(product.code)}>
                     {product.stock === 0 ? 'Sold out' : <><span aria-hidden="true">+</span> Add</>}</button></td></tr>;
               })}</tbody>
             </table>
@@ -170,14 +165,15 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
             const backendData = totalsReady && totals.items
               ? totals.items.find((i) => String(i.item_id) === String(item.code))
               : null;
-            const displayTotal = backendData ? backendData.line_total * 100 : item.priceCents * item.quantity;
+            const displayTotal = backendData ? selectionLineTotal(cart, item, Math.round(backendData.line_total * 100)) : item.priceCents * item.quantity;
             const bundleApplied = backendData?.bundle_applied;
 
-            return <div className="cart-item" key={item.code}>
+            return <div className="cart-item" key={cartKey(item)}>
               <div className="cart-item-top">
                 <div>
                   <h3>{item.name}</h3>
                   <p>#{item.code} <span>•</span> {money(item.priceCents)} each</p>
+                  {item.size && <p>Size: {item.size} · Color: {item.color}</p>}
                   {bundleApplied && (
                     <p style={{ color: '#245337', fontWeight: '700', marginTop: '4px' }}>
                       * Bundle Deal: {backendData.bundle_trigger} for ${Number(backendData.bundle_price).toFixed(2)}
@@ -188,31 +184,12 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
               </div>
               <div className="cart-item-actions">
                 <div className="quantity-control">
-                  <button type="button" aria-label={`Decrease ${item.name} quantity`} disabled={item.quantity <= 1} onClick={() => dispatch({ type: 'decrease', code: item.code })}>-</button>
+                  <button type="button" aria-label={`Decrease ${item.name} quantity`} disabled={item.quantity <= 1} onClick={() => dispatch({ type: 'decrease', key: cartKey(item) })}>-</button>
                   <span aria-label={`Quantity ${item.quantity}`}>{item.quantity}</span>
-                  <button type="button" aria-label={`Increase ${item.name} quantity`} disabled={item.quantity >= item.stock} onClick={() => add(item.code)}>+</button>
+                  <button type="button" aria-label={`Increase ${item.name} quantity`} disabled={productQuantity(cart, item.code) >= item.stock} onClick={() => add(item.code, item)}>+</button>
                 </div>
-                <button className="remove-item" type="button" onClick={() => dispatch({ type: 'remove', code: item.code })} aria-label={`Remove ${item.name} from cart`}>Remove</button>
-                {staff && <button className="staff-remove-item" type="button"
-                  onClick={() => { setOverrideItem(item.code); setOverridePin(''); setOverrideError(''); }}>
-                  Staff remove
-                </button>}
+                <button className="remove-item" type="button" onClick={() => removeItem(item)} aria-label={`Remove ${item.name} from cart`}>Remove</button>
               </div>
-              {staff && overrideItem === item.code && <form className="staff-removal-form"
-                onSubmit={(event) => submitStaffRemoval(event, item)}>
-                <label htmlFor={`staff-removal-pin-${item.code}`}>Confirm staff PIN ({staff.staff_id})</label>
-                <input id={`staff-removal-pin-${item.code}`} type="password" inputMode="numeric"
-                  autoComplete="current-password" required value={overridePin}
-                  onChange={(event) => setOverridePin(event.target.value)} />
-                {overrideError && <p className="staff-removal-error" role="alert">{overrideError}</p>}
-                <div>
-                  <button type="submit" disabled={overrideBusy}>Authorize and remove</button>
-                  <button type="button" className="remove-item" disabled={overrideBusy}
-                    onClick={() => { setOverrideItem(null); setOverridePin(''); setOverrideError(''); }}>
-                    Cancel
-                  </button>
-                </div>
-              </form>}
             </div>;
           })}
         </div>
@@ -226,9 +203,12 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
           <p className="grand-total"><span>Total</span><strong>${Number(totals.total).toFixed(2)}</strong></p>
         </> : <p className="helper-text">{totals.cart === cart && totals.status === 'error' ? totals.error : 'Calculating total...'}</p>}</div>
         
-        <CheckoutReceipt key={JSON.stringify([cart, studentId.trim(), employeeId.trim()])} studentId={studentId.trim()} employeeId={employeeId.trim()} cart={cart} totalsReady={totalsReady} busy={busy} setBusy={setBusy} />
+        <CheckoutReceipt key={JSON.stringify([cart, studentId.trim(), employeeId.trim(), pricingVersion])} studentId={studentId.trim()} employeeId={employeeId.trim()} cart={cart} totalsReady={totalsReady} busy={busy} setBusy={setBusy} />
         <button id="cancel-transaction" className="cancel-transaction" type="button" disabled={!cart.length && !studentId && !employeeId} onClick={cancel}>Cancel transaction</button>
       </aside>
     </fieldset>
+    {removalItem && <StaffRemovalDialog item={removalItem} onCancel={closeRemoval} onApproved={() => {
+      dispatch({ type: 'remove', key: cartKey(removalItem) }); closeRemoval();
+    }} />}
   </>;
 }
