@@ -53,6 +53,21 @@ def seed_database():
             conn.commit()
             print("Database successfully seeded from CSV.")
 
+    # Apparel sizes/colors (only once, and only after inventory exists)
+    cursor.execute("SELECT COUNT(*) FROM apparel_variants")
+    if cursor.fetchone()[0] == 0:
+        variants_csv = os.path.join(os.path.dirname(os.path.abspath(__file__)), "apparel_variants.csv")
+        if os.path.exists(variants_csv):
+            with open(variants_csv, mode="r", newline="") as file:
+                for row in csv.DictReader(file):
+                    cursor.execute(
+                        """INSERT INTO apparel_variants (item_id, size, color, stock_quantity)
+                        VALUES (%s, %s, %s, %s)""",
+                        (row["item_id"], row["size"], row["color"], row["stock_quantity"]),
+                    )
+            conn.commit()
+            print("Apparel variants seeded.")
+
     cursor.close()
     conn.close()
 
