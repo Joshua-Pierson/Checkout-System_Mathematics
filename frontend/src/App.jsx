@@ -16,11 +16,7 @@ function transactionReducer(state, action) {
     case 'add-course': return addCourseToCart(state.cart, action.catalog, action.result);
     case 'decrease': return { cart: state.cart.map((item) => cartKey(item) === action.key
       ? { ...item, quantity: Math.max(1, item.quantity - 1) } : item), message: 'Quantity updated.' };
-<<<<<<< HEAD
     case 'remove': return { cart: state.cart.filter((item) => cartKey(item) !== action.key), message: 'Item removed from the cart.' };
-=======
-    case 'remove': return { cart: state.cart.filter((item) => item.code !== action.code), message: 'Item removed from the cart.' };
->>>>>>> 71a6947a2310e2761be051bcdbaf45ffe49465b9
     case 'cancel': return { cart: [], message: 'Transaction canceled. Ready for the next customer.' };
     default: return state;
   }
