@@ -136,3 +136,5 @@ tbody tr:hover { background: #fbfdf9; }
 @media print { .app-header, .catalog-column, .page-heading, .checkout-button, .cancel-checkout, .cancel-transaction, .cart-item-actions, .app-footer { display: none !important; } .student-workspace { display: block; } .panel { box-shadow: none; } .app-shell { padding: 0; } }
 
 .deal-label { display: block; color: #245337; font-size: 12px; margin: 6px 0; }
+
+.discount-id-fields { display: grid; gap: 16px; min-width: 0; }
