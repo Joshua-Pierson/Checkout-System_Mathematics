@@ -34,25 +34,27 @@ export const deleteItem = (id) => request(`/api/items/${id}`, { method: 'DELETE'
 
 const cartItems = (cart) => cart.map((item) => ({ item_id: Number(item.code), quantity: item.quantity }));
 
-export const calculateCart = (cart, studentId, signal) => request('/api/cart/calculate', { 
-  method: 'POST', body: { items: cartItems(cart), student_id: studentId }, signal 
+export const calculateCart = (cart, studentId, signal, employeeId) => request('/api/cart/calculate', { 
+  method: 'POST', body: { items: cartItems(cart), student_id: studentId, employee_id: employeeId }, signal 
 });
 
-export const checkout = (cart, cashTendered, studentId) => request('/api/checkout/cash', {
+export const checkout = (cart, cashTendered, studentId, employeeId) => request('/api/checkout/cash', {
   method: 'POST', 
   body: { 
     cart: cartItems(cart),
     cash_tendered: Number(cashTendered),
-    student_id: studentId
+    student_id: studentId,
+    employee_id: employeeId
   }
 });
 
-export const checkoutCard = (cart, cardNumber, studentId) => request('/api/checkout/card', {
+export const checkoutCard = (cart, cardNumber, studentId, employeeId) => request('/api/checkout/card', {
   method: 'POST', 
   body: { 
     cart: cartItems(cart),
     card_number: cardNumber,
-    student_id: studentId
+    student_id: studentId,
+    employee_id: employeeId
   }
 });
 
