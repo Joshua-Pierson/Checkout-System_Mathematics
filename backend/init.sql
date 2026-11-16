@@ -48,3 +48,35 @@ CREATE TABLE IF NOT EXISTS tax_exempt_categories (
     category   VARCHAR(100) PRIMARY KEY,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS staff (
+    staff_id VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    pin_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(50) DEFAULT 'cashier',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS override_audit_log (
+    log_id INT AUTO_INCREMENT PRIMARY KEY,
+    staff_id VARCHAR(50) NOT NULL,
+    action_type VARCHAR(50) NOT NULL,
+    item_id INT NOT NULL,
+    details VARCHAR(255),
+    original_price DECIMAL(10, 2) NULL,
+    new_price DECIMAL(10, 2) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (staff_id) REFERENCES staff(staff_id) ON DELETE RESTRICT
+);
+
+CREATE TABLE IF NOT EXISTS price_override_grants (
+    token_hash CHAR(64) PRIMARY KEY,
+    staff_id VARCHAR(50) NOT NULL,
+    item_id INT NOT NULL,
+    original_price DECIMAL(10, 2) NOT NULL,
+    new_price DECIMAL(10, 2) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    used_at DATETIME NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (staff_id) REFERENCES staff(staff_id) ON DELETE RESTRICT
+);

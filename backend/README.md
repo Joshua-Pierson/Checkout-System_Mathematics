@@ -23,6 +23,8 @@ A robust, containerized Point-and-Sale (POS) checkout and inventory management s
 - **Disk-Based Receipt Serialization:** Automatically scaffolds a backend audit directory and serializes itemized transaction metadata into flat-file text records (`backend/receipts/receipt_<transaction_id>.txt`).
 - **Dynamic Tax Exemptions:** Supports both item-level and category-wide tax exemptions, seamlessly bypassed during subtotal and tax liability computations.
 - **Catalog Management:** Full CRUD operations for inventory items with strict taxonomy enforcement via an immutable whitelist.
+- **Staff Overrides:** Staff-authenticated item removals and price overrides are recorded in the audit log. Price grants are short-lived, item/price-bound, single-use, and verified by calculation and checkout.
+- **Discount Management:** Managers can configure student/employee discount rules and category eligibility from the manager view.
 
 ---
 
@@ -44,6 +46,11 @@ The Flask backend exposes the following routes for data retrieval, calculation, 
 - **Create Item:** `POST http://localhost:5001/api/items`
 - **Update Item:** `PUT http://localhost:5001/api/items/<item_id>`
 - **Delete Item:** `DELETE http://localhost:5001/api/items/<item_id>`
+- **Authorize item removal:** `DELETE http://localhost:5001/api/cart/override/item`
+- **Authorize a price override:** `PUT http://localhost:5001/api/cart/override/price`
+- **Discount rules and category eligibility:** `GET/PUT http://localhost:5001/api/discounts/...`
+
+For an existing database, apply `price_override_schema.sql` after the staff and audit tables exist. Fresh databases receive the grants table through `init.sql`.
 
 ---
 

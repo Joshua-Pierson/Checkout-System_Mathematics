@@ -32,37 +32,55 @@ export const createItem = (item) => request('/api/items', { method: 'POST', body
 export const updateItem = (id, item) => request(`/api/items/${id}`, { method: 'PUT', body: item });
 export const deleteItem = (id) => request(`/api/items/${id}`, { method: 'DELETE' });
 
-const cartItems = (cart) => cart.map((item) => ({ item_id: Number(item.code), quantity: item.quantity }));
+const cartItems = (cart) => cart.map((item) => ({
+  item_id: Number(item.code),
+  quantity: item.quantity,
+  ...(item.priceOverride ? {
+    price_override: {
+      new_price: item.priceOverride.newPrice,
+      grant_token: item.priceOverride.grantToken,
+    },
+  } : {}),
+}));
 
-export const calculateCart = (cart, studentId, signal) => request('/api/cart/calculate', { 
-  method: 'POST', body: { items: cartItems(cart), student_id: studentId }, signal 
+export const calculateCart = (cart, studentId, employeeId, signal) => request('/api/cart/calculate', {
+  method: 'POST', body: { items: cartItems(cart), student_id: studentId, employee_id: employeeId }, signal
 });
 
-export const checkout = (cart, cashTendered, studentId) => request('/api/checkout/cash', {
+export const checkout = (cart, cashTendered, studentId, employeeId) => request('/api/checkout/cash', {
   method: 'POST', 
   body: { 
     cart: cartItems(cart),
     cash_tendered: Number(cashTendered),
-    student_id: studentId
+    student_id: studentId,
+    employee_id: employeeId
   }
 });
 
-export const checkoutCard = (cart, cardNumber, studentId) => request('/api/checkout/card', {
+export const checkoutCard = (cart, cardNumber, studentId, employeeId) => request('/api/checkout/card', {
   method: 'POST', 
   body: { 
     cart: cartItems(cart),
     card_number: cardNumber,
-    student_id: studentId
+    student_id: studentId,
+    employee_id: employeeId
   }
+});
+
+export const authorizeItemRemoval = (staffId, pin, itemId) => request('/api/cart/override/item', {
+  method: 'DELETE', body: { staff_id: staffId, pin, item_id: Number(itemId) },
+});
+export const authorizePriceOverride = (override) => request('/api/cart/override/price', {
+  method: 'PUT', body: override,
 });
 
 // --- Discount & Bundle Management Endpoints ---
 
 export const fetchDiscountEligibilities = (signal) => request('/api/discounts/categories', { signal }).then(r => r.data);
-export const updateDiscountEligibility = (category, data) => request(`/api/discounts/categories/${category}`, { method: 'PUT', body: data });
+export const updateDiscountEligibility = (category, data) => request(`/api/discounts/categories/${encodeURIComponent(category)}`, { method: 'PUT', body: data });
 
 export const fetchDiscountRules = (signal) => request('/api/discounts/rules', { signal }).then(r => r.data);
-export const updateDiscountRule = (profile, data) => request(`/api/discounts/rules/${profile}`, { method: 'PUT', body: data });
+export const updateDiscountRule = (profile, data) => request(`/api/discounts/rules/${encodeURIComponent(profile)}`, { method: 'PUT', body: data });
 
 export const fetchBundles = (signal) => request('/api/discounts/bundles', { signal }).then(r => r.data);
 export const updateBundle = (itemId, data) => request(`/api/discounts/bundles/${itemId}`, { method: 'PUT', body: data });

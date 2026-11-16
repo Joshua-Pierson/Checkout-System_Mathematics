@@ -54,6 +54,7 @@ h3 { font-size: 14px; font-weight: 800; }
 .student-id-card { display: grid; grid-template-columns: 1fr 240px; align-items: center; gap: 25px; border: 1px solid #d8e6d7; border-radius: 14px; padding: 23px 25px; background: #e9f2e6; }
 .student-id-card h2 { margin: 7px 0; font-size: 17px; letter-spacing: -.4px; }
 .student-id-card > div > p { font-size: 12px; color: #54715b; line-height: 1.6; max-width: 270px; }
+.id-fields { display: grid; gap: 12px; }
 .id-field label { display: flex; justify-content: space-between; align-items: center; }
 .optional { font-size: 10px; font-weight: 500; color: #59735f; }
 #student-id-status { font-size: 10px; margin-top: 7px; line-height: 1.4; color: #54715b; }
@@ -105,6 +106,22 @@ tbody tr:hover { background: #fbfdf9; }
 .quantity-control > span { min-width: 29px; text-align: center; font-size: 11px; font-weight: 600; }
 .remove-item { border: 0; background: none; color: #8a5753; padding: 6px 0 6px 8px; font-size: 10px; font-weight: 500; }
 .remove-item:hover:not(:disabled) { background: transparent; color: #a0322b; text-decoration: underline; }
+.price-override-label { color: #245337; font-size: 10px; white-space: nowrap; }
+.override-modal-overlay { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: #10251dcc; }
+.override-modal { width: min(100%, 430px); padding: 25px; border-radius: 12px; background: white; box-shadow: 0 12px 40px #10251d55; }
+.override-modal h2 { margin-bottom: 8px; }
+.override-modal > p { margin-bottom: 18px; color: var(--muted); font-size: 13px; }
+.override-modal form { display: grid; gap: 8px; }
+.override-modal-actions { display: flex; gap: 10px; margin-top: 12px; }
+.override-modal-actions button:last-child { background: white; color: var(--green); }
+.override-error { color: #a0322b; font-size: 12px; }
+.discount-rule { display: grid; grid-template-columns: auto auto minmax(110px, 1fr) auto minmax(90px, 130px) auto; align-items: center; gap: 10px; margin: 15px 0; }
+.discount-rule label { margin: 0; }
+.discount-rule strong { text-transform: capitalize; }
+section[aria-labelledby='manager-heading'] .discount-rule select { width: 100%; }
+section[aria-labelledby='manager-heading'] h3 { margin-top: 25px; }
+section[aria-labelledby='manager-heading'] input[type='checkbox'] { width: auto; height: auto; }
+@media (max-width: 700px) { .discount-rule { grid-template-columns: 1fr 1fr; } }
 .totals { margin: 20px 24px 0; }
 .totals > p { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; color: #67796a; margin-bottom: 13px; }
 .totals > p > span:last-child { color: #2d4b36; font-variant-numeric: tabular-nums; }

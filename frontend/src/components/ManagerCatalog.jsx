@@ -3,12 +3,14 @@ import CatalogForm from './manager/CatalogForm.jsx';
 
 import BundleForm from './manager/BundleForm.jsx';
 import CatalogList from './manager/CatalogList.jsx';
+import DiscountManager from './manager/DiscountManager.jsx';
 
 const actions = [
   { value: 'add', label: 'Add to Catalog' },
   { value: 'edit', label: 'Edit Catalog' },
   { value: 'remove', label: 'Remove From Catalog' },
   { value: 'bundles', label: 'Manage Multi-Buy Bundles' },
+  { value: 'discounts', label: 'Configure Discounts' },
 ];
 
 export default function ManagerCatalog({ onStudent, onSaved, catalog, status, error }) {
@@ -27,6 +29,8 @@ export default function ManagerCatalog({ onStudent, onSaved, catalog, status, er
     <div className="manager-form-panel">
       {action === 'bundles' ? (
         <BundleForm catalog={catalog} status={status} error={error} onBusyChange={setSaving} />
+      ) : action === 'discounts' ? (
+        <DiscountManager />
       ) : (
         <CatalogForm key={action} action={action} onSaved={onSaved} embedded onBusyChange={setSaving} />
       )}

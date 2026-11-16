@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { prepareInventory, addToCart, cartTotal, calculateChange } from '../src/utils/cart.js';
+import { prepareInventory, addToCart, cartTotal, calculateChange, linePricing } from '../src/utils/cart.js';
 
 const row = { item_id: 1001, name: 'Textbook', unit_price: '85.00', category: 'Books', stock_quantity: '2' };
 test('CSV strings normalize and duplicate or invalid inventory is rejected', () => {
@@ -31,4 +31,9 @@ test('cash change handles insufficient and invalid payment', () => {
   assert.equal(calculateChange(598, 598), 0);
   assert.equal(calculateChange(598, 500), null);
   assert.equal(calculateChange(598, NaN), null);
+});
+test('staff price overrides replace, rather than stack with, multi-buy pricing', () => {
+  const item = { priceCents: 300, quantity: 3, multiBuy: { quantity: 3, priceCents: 700 } };
+  assert.equal(linePricing(item).totalCents, 700);
+  assert.equal(linePricing({ ...item, priceCents: 200, priceOverride: { newPrice: 2, grantToken: 'grant' } }).totalCents, 600);
 });

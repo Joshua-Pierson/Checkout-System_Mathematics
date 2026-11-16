@@ -1,4 +1,6 @@
 import os
+import secrets
+import math
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 import mysql.connector
@@ -26,6 +28,25 @@ def get_db_connection():
         password=os.environ.get("DB_PASSWORD", "rootpassword"),
         database=os.environ.get("DB_NAME", "pos_inventory"),
     )
+
+
+def _price_override(req_item, db_price):
+    override = req_item.get("price_override")
+    if override is None:
+        return db_price, None
+    if not isinstance(override, dict) or not isinstance(override.get("grant_token"), str) or not override["grant_token"]:
+        raise ValueError("A valid staff authorization is required for price overrides.")
+    try:
+        requested_price = round(float(override["new_price"]), 2)
+    except (KeyError, TypeError, ValueError):
+        raise ValueError("The authorized override price is invalid.") from None
+    if requested_price < 0:
+        raise ValueError("The authorized override price cannot be negative.")
+    grant = audit_dao_manager.get_price_override_grant(override["grant_token"], req_item.get("item_id"))
+    if not grant or round(float(grant["new_price"]), 2) != requested_price or round(float(grant["original_price"]), 2) != round(db_price, 2):
+        raise ValueError("The price override authorization is invalid, expired, or no longer matches inventory.")
+    return requested_price, override["grant_token"]
+
 
 @app.route("/api/inventory", methods=["GET"])
 def get_inventory():
@@ -84,8 +105,9 @@ def calculate_cart():
             db_item = cursor.fetchone()
             
             if db_item:
-                price = float(db_item["unit_price"])
-                rule = multibuy_rules.get(item_id)
+                original_price = float(db_item["unit_price"])
+                price, override_token = _price_override(req_item, original_price)
+                rule = multibuy_rules.get(item_id) if not override_token else None
                 line_tot, bundle_applied = apply_multibuy(price, quantity, rule)
                 
                 receipt_items.append({
@@ -93,6 +115,7 @@ def calculate_cart():
                     "name": db_item["name"],
                     "category": db_item["category"],
                     "price": price,
+                    "price_overridden": bool(override_token),
                     "quantity": quantity,
                     "line_total": line_tot,
                     "bundle_applied": bundle_applied,
@@ -123,6 +146,8 @@ def calculate_cart():
             "total": round(total_due, 2),
             "items": receipt_items
         })
+    except ValueError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
@@ -194,6 +219,7 @@ def process_cash_checkout():
     subtotal = 0.0
     total_tax = 0.0
     receipt_items = []
+    override_tokens = []
 
     try:
         conn = get_db_connection()
@@ -212,8 +238,11 @@ def process_cash_checkout():
             if int(db_item["stock_quantity"]) < quantity:
                 return jsonify({"status": "error", "message": f"Insufficient stock for item {item_id}."}), 409
 
-            price = float(db_item["unit_price"])
-            rule = multibuy_rules.get(item_id)
+            original_price = float(db_item["unit_price"])
+            price, override_token = _price_override(req_item, original_price)
+            if override_token:
+                override_tokens.append(override_token)
+            rule = multibuy_rules.get(item_id) if not override_token else None
             line_tot, bundle_applied = apply_multibuy(price, quantity, rule)
 
             receipt_items.append({
@@ -222,6 +251,7 @@ def process_cash_checkout():
                 "category": db_item["category"],
                 "quantity": quantity,
                 "price": price,
+                "price_overridden": bool(override_token),
                 "line_total": line_tot,
                 "bundle_applied": bundle_applied,
                 "bundle_trigger": rule["trigger"] if bundle_applied else None,
@@ -246,6 +276,8 @@ def process_cash_checkout():
             deficit = round(total_due - cash_tendered, 2)
             return jsonify({"status": "error", "message": "Insufficient payment", "amount_due": total_due, "deficit": deficit}), 400
 
+        if override_tokens:
+            audit_dao_manager.consume_price_override_grants(override_tokens)
         for item in receipt_items:
             dao.decrement_stock(item["item_id"], item["quantity"])
 
@@ -272,6 +304,8 @@ def process_cash_checkout():
             "receipt": receipt_data
         }), 200
 
+    except ValueError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
@@ -299,6 +333,7 @@ def process_card_checkout():
     subtotal = 0.0
     total_tax = 0.0
     receipt_items = []
+    override_tokens = []
 
     try:
         conn = get_db_connection()
@@ -317,8 +352,11 @@ def process_card_checkout():
             if int(db_item["stock_quantity"]) < quantity:
                 return jsonify({"status": "error", "message": f"Insufficient stock for item {item_id}."}), 409
 
-            price = float(db_item["unit_price"])
-            rule = multibuy_rules.get(item_id)
+            original_price = float(db_item["unit_price"])
+            price, override_token = _price_override(req_item, original_price)
+            if override_token:
+                override_tokens.append(override_token)
+            rule = multibuy_rules.get(item_id) if not override_token else None
             line_tot, bundle_applied = apply_multibuy(price, quantity, rule)
 
             receipt_items.append({
@@ -327,6 +365,7 @@ def process_card_checkout():
                 "category": db_item["category"],
                 "quantity": quantity,
                 "price": price,
+                "price_overridden": bool(override_token),
                 "line_total": line_tot,
                 "bundle_applied": bundle_applied,
                 "bundle_trigger": rule["trigger"] if bundle_applied else None,
@@ -347,6 +386,8 @@ def process_card_checkout():
 
         total_due = round(subtotal - discount_total + total_tax, 2)
 
+        if override_tokens:
+            audit_dao_manager.consume_price_override_grants(override_tokens)
         for item in receipt_items:
             dao.decrement_stock(item["item_id"], item["quantity"])
 
@@ -370,6 +411,8 @@ def process_card_checkout():
             "receipt": receipt_data
         }), 200
 
+    except ValueError as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
@@ -630,9 +673,22 @@ def authorize_price_override():
     try:
         original_price = float(data["original_price"])
         new_price = float(data["new_price"])
-        
-        if new_price < 0:
-            return jsonify({"status": "error", "message": "New price cannot be negative."}), 400
+
+        if not math.isfinite(original_price) or not math.isfinite(new_price) or new_price < 0:
+            return jsonify({"status": "error", "message": "Prices must be finite and the new price cannot be negative."}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            cursor.execute("SELECT unit_price FROM inventory WHERE item_id = %s", (item_id,))
+            item = cursor.fetchone()
+        finally:
+            cursor.close()
+            conn.close()
+        if not item:
+            return jsonify({"status": "error", "message": "Item not found."}), 404
+        if round(float(item["unit_price"]), 2) != round(original_price, 2):
+            return jsonify({"status": "error", "message": "The original price does not match current inventory."}), 409
 
         # 1. Evaluate Staff Credentials
         is_authenticated, staff_profile = auth_manager.verify_staff_credentials(staff_id, pin)
@@ -644,12 +700,14 @@ def authorize_price_override():
             }), 401
             
         # 2. Persist the Mutation Event to the Immutable Ledger
-        audit_dao_manager.log_price_override(
+        grant_token = secrets.token_urlsafe(32)
+        audit_dao_manager.authorize_price_override(
             staff_id=staff_id, 
             item_id=item_id, 
             original_price=original_price,
             new_price=new_price,
-            reason=f"Authorized by {staff_profile['name']}. Reason: {reason}"
+            reason=f"Authorized by {staff_profile['name']}. Reason: {reason}",
+            token=grant_token
         )
         
         # 3. Issue Authorization
@@ -657,7 +715,8 @@ def authorize_price_override():
             "status": "success",
             "message": "Price override authorized and logged.",
             "authorized_by": staff_profile["name"],
-            "new_price": round(new_price, 2)
+            "new_price": round(new_price, 2),
+            "grant_token": grant_token
         }), 200
         
     except ValueError:
