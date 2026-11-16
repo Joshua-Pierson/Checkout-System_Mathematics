@@ -14,19 +14,24 @@ function initializeStudentCart() {
   const categoryFilter = document.querySelector("#category-filter");
   const searchInput = document.querySelector("#product-search");
   const cancelButton = document.querySelector("#cancel-transaction");
-
-  const requiredElements = [
-    form,
-    codeInput,
-    message,
-    addedItems,
-    cartTotal,
-    productList,
-    catalogMessage,
-    categoryFilter,
-    searchInput,
-    cancelButton
-  ];
+  const courseInput = document.querySelector("#course-number");
+  const courseLookupButton = document.querySelector("#lookup-course-button");
+  const courseResults = document.querySelector("#course-results");
+const requiredElements = [
+  form,
+  codeInput,
+  message,
+  addedItems,
+  cartTotal,
+  productList,
+  catalogMessage,
+  categoryFilter,
+  searchInput,
+  cancelButton,
+  courseInput,
+  courseLookupButton,
+  courseResults
+];
 
   if (!requiredElements.every(Boolean)) {
     console.error("Required student cart HTML elements are missing.");
@@ -86,12 +91,14 @@ function initializeStudentCart() {
       throw new Error(`Product ${code} has an invalid price or stock.`);
     }
 
-    return {
-      code,
-      name: name.trim(),
-      priceCents,
-      category: String(product.category ?? "").trim() || "Uncategorized",
-      stock
+  return {
+    code,
+    name: name.trim(),
+    priceCents,
+    category: String(product.category ?? "").trim() || "Uncategorized",
+    stock,
+    sizes: ["S", "M", "L", "XL"],
+    colors: ["Black", "Blue", "Red", "White"]
     };
   }
 
@@ -179,13 +186,48 @@ function initializeStudentCart() {
 
       const currentQuantity = cartItem ? cartItem.quantity : 0;
       const actionCell = document.createElement("td");
+      const sizeSelect = document.createElement("select");
+
+      for (const size of product.sizes) {
+        const option = document.createElement("option");
+        option.value = size;
+        option.textContent = size;
+        sizeSelect.append(option);
+  }
+
+      actionCell.append(sizeSelect);
+        
+      let selectedSize = "S";
+
+        sizeSelect.addEventListener("change", () => {
+          selectedSize = sizeSelect.value;
+    });
+
+
+    const colorSelect = document.createElement("select");
+
+    for (const color of product.colors) {
+        const option = document.createElement("option");
+        option.value = color;
+        option.textContent = color;
+        colorSelect.append(option);
+      }
+
+      actionCell.append(colorSelect);
+
+      let selectedColor = "Black";
+
+      colorSelect.addEventListener("change", () => {
+         selectedColor = colorSelect.value;
+      });
+
 
       const productAddButton = createButton(
-        product.stock === 0 ? "Out of stock" : "Add",
-        `Add ${product.name} to cart`,
-        currentQuantity >= product.stock,
-        () => addItem(product.code)
-      );
+       product.stock === 0 ? "Out of stock" : "Add",
+       `Add ${product.name} to cart`,
+       currentQuantity >= product.stock,
+       () => addItem(product.code, selectedSize, selectedColor)
+     );
 
       actionCell.append(productAddButton);
       row.append(actionCell);
@@ -212,10 +254,13 @@ function initializeStudentCart() {
       const details = document.createElement("span");
 
       details.textContent =
-        `${item.name} | Code: ${item.code} | ` +
+        `${item.name} | ` +
+        `Code: ${item.code} | ` +
+        `Size: ${item.size} | ` +
+        `Color: ${item.color} | ` +
         `${money(item.priceCents)} each | ` +
         `Quantity: ${item.quantity} | ` +
-        `Line total: ${money(lineTotal)} `;
+        `Line total: ${money(lineTotal)}`;
 
       const decreaseButton = createButton(
         "−",
@@ -277,7 +322,7 @@ function initializeStudentCart() {
   }
 
   // Code entry and product buttons use the same stock checks.
-  function addItem(code) {
+  function addItem(code, size = null , color = null ) {
     if (!catalogReady) {
       message.textContent = "Products have not loaded yet.";
       return false;
@@ -305,7 +350,12 @@ function initializeStudentCart() {
     if (existingItem) {
       existingItem.quantity++;
     } else {
-      cart.push({ ...product, quantity: 1 });
+      cart.push({
+       ...product,
+       quantity: 1,
+       size,
+       color
+     });
     }
 
     refresh();
@@ -327,11 +377,23 @@ function initializeStudentCart() {
   // Update the product table when the category changes.
   categoryFilter.addEventListener("change", renderCatalog);
 
-  // Update matching products immediately as the student types.
-  searchInput.addEventListener("input", renderCatalog);
+// Update matching products immediately as the student types.
+searchInput.addEventListener("input", renderCatalog);
 
-  // Task 1935: Cancel the whole transaction.
-  cancelButton.addEventListener("click", () => {
+courseLookupButton.addEventListener(
+  "click",
+  lookupCourse
+);
+
+courseInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    lookupCourse();
+  }
+});
+
+// Task 1935: Cancel the whole transaction.
+cancelButton.addEventListener("click", () => {
     // Clear only the frontend cart.
     // No inventory update or checkout request is sent.
     cart.length = 0;
@@ -347,7 +409,39 @@ function initializeStudentCart() {
 
     codeInput.focus();
   });
+// Task 1949: Look up supplies by course number.
+function lookupCourse() {
+  const courseNumber = courseInput.value.trim();
 
+  courseResults.replaceChildren();
+
+  if (!courseNumber) {
+    courseResults.textContent =
+      "Please enter a course number.";
+    return;
+  }
+
+const heading = document.createElement("h3");
+heading.textContent = `Supplies for ${courseNumber}`;
+
+courseResults.append(heading);
+
+const demoItems = [
+  { name: "Textbook", stock: true },
+  { name: "Notebook", stock: true },
+  { name: "Calculator", stock: false }
+];
+
+for (const item of demoItems) {
+  const row = document.createElement("p");
+
+  row.textContent =
+    `${item.name} - ${item.stock ? "In Stock" : "Out of Stock"}`;
+
+  courseResults.append(row);
+}
+
+}
   // Request products from your existing api.js.
   async function loadInventory() {
     addButton.disabled = true;

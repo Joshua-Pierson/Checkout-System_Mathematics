@@ -1,3 +1,4 @@
+import { aggregateCart } from './utils/apparel.js';
 const baseUrl = 'http://localhost:5001';
 
 async function request(path, { signal, method = 'GET', body } = {}) {
@@ -15,7 +16,9 @@ async function request(path, { signal, method = 'GET', body } = {}) {
   try { result = await response.json(); }
   catch { throw new Error(`Backend returned an invalid response (${response.status}).`); }
   if (!response.ok || result.status !== 'success') {
-    throw new Error(result.message || `Request failed (${response.status}).`);
+    const error = new Error(result.message || `Request failed (${response.status}).`);
+    error.status = response.status;
+    throw error;
   }
   return result;
 }
@@ -32,26 +35,71 @@ export const createItem = (item) => request('/api/items', { method: 'POST', body
 export const updateItem = (id, item) => request(`/api/items/${id}`, { method: 'PUT', body: item });
 export const deleteItem = (id) => request(`/api/items/${id}`, { method: 'DELETE' });
 
-const cartPayload = (cart) => ({ items: cart.map((item) => ({ item_id: Number(item.code), quantity: item.quantity })) });
+const cartItems = aggregateCart;
 
-export const calculateCart = (cart, studentId, signal) => request('/api/cart/calculate', { 
-  method: 'POST', body: { ...cartPayload(cart), student_id: studentId }, signal 
+export const calculateCart = (cart, studentId, signal, employeeId) => request('/api/cart/calculate', { 
+  method: 'POST', body: { items: cartItems(cart), student_id: studentId, employee_id: employeeId }, signal 
 });
 
-export const checkout = (cart, cashTendered, studentId) => request('/api/checkout/cash', {
+export const checkout = (cart, cashTendered, studentId, employeeId) => request('/api/checkout/cash', {
   method: 'POST', 
   body: { 
-    ...cartPayload(cart),
+    cart: cartItems(cart),
     cash_tendered: Number(cashTendered),
-    student_id: studentId
+    student_id: studentId,
+    employee_id: employeeId
   }
 });
 
-export const checkoutCard = (cart, cardNumber, studentId) => request('/api/checkout/card', {
+export const checkoutCard = (cart, cardNumber, studentId, employeeId) => request('/api/checkout/card', {
   method: 'POST', 
   body: { 
-    ...cartPayload(cart),
+    cart: cartItems(cart),
     card_number: cardNumber,
-    student_id: studentId
+    student_id: studentId,
+    employee_id: employeeId
   }
+});
+
+// --- Discount & Bundle Management Endpoints ---
+
+export const fetchDiscountEligibilities = (signal) => request('/api/discounts/categories', { signal }).then(r => r.data);
+export const updateDiscountEligibility = (category, data) => request(`/api/discounts/categories/${category}`, { method: 'PUT', body: data });
+
+export const fetchDiscountRules = (signal) => request('/api/discounts/rules', { signal }).then(r => r.data);
+export const updateDiscountRule = (profile, data) => request(`/api/discounts/rules/${profile}`, { method: 'PUT', body: data });
+
+export const fetchBundles = (signal) => request('/api/discounts/bundles', { signal }).then(r => r.data);
+export const updateBundle = (itemId, data) => request(`/api/discounts/bundles/${itemId}`, { method: 'PUT', body: data });
+export const deleteBundle = (itemId) => request(`/api/discounts/bundles/${itemId}`, { method: 'DELETE' });
+
+export const createBundle = (bundle) => request('/api/bundles', { method: 'POST', body: bundle });
+
+export async function fetchCourseSupplies(courseCode, signal) {
+  const code = String(courseCode).trim().toUpperCase();
+  if (!code) throw new Error('Enter a course number.');
+  const result = await request(`/api/courses/${encodeURIComponent(code)}`, { signal });
+  if (!Array.isArray(result.supplies)) throw new Error('The backend returned invalid course supplies.');
+  return result;
+}
+
+export async function validateCourseBundle(courseCode, signal) {
+  const result = await request('/api/cart/course', {
+    method: 'POST', body: { course_code: String(courseCode).trim().toUpperCase() }, signal,
+  });
+  if (!Array.isArray(result.added) || !Array.isArray(result.out_of_stock)) {
+    throw new Error('The backend returned an invalid course bundle.');
+  }
+  return result;
+}
+
+export const authorizePriceChange = (data) => request('/api/cart/override/price', {
+  method: 'PUT', body: data,
+});
+
+export const staffLogin = (staffId, pin) => request('/api/auth/login', {
+  method: 'POST', body: { staff_id: staffId.trim(), pin },
+});
+export const authorizeItemRemoval = (itemId, staffId, pin) => request('/api/cart/override/item', {
+  method: 'DELETE', body: { item_id: Number(itemId), staff_id: staffId.trim(), pin },
 });

@@ -1,11 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-
-// Replace Vite's build-time environment expression for Node's test runner.
-const source = (await readFile(new URL('../src/api.js', import.meta.url), 'utf8'))
-  .replace('import.meta.env.VITE_API_BASE_URL', 'undefined');
-const api = await import(`data:text/javascript;base64,${Buffer.from(source).toString('base64')}`);
+import * as api from '../src/api.js';
 
 test('requests match Flask routes, payloads, response envelope, and errors', async () => {
   const original = globalThis.fetch;
