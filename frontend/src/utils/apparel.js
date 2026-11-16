@@ -1,5 +1,5 @@
 // Legacy options are choices only; the current API has no size/color stock data.
-export const APPAREL_SIZES = ['S', 'M', 'L', 'XL'];
+export const APPAREL_SIZES = ['S', 'M', 'L', 'XL', 'XXL'];
 export const APPAREL_COLORS = ['Black', 'Blue', 'Red', 'White'];
 export const isApparel = (item) => item.category?.trim().toLowerCase() === 'apparel';
 export const cartKey = (item) => item.size && item.color ? JSON.stringify([item.code, item.size, item.color]) : item.code;
