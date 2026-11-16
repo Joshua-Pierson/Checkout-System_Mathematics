@@ -26,6 +26,9 @@ export function StaffAuthProvider({ children }) {
     catch (error) { if (error.status === 401) logout(); throw error; }
   }
   const authorizeRemoval = (id) => protectedRequest(({ staffId, pin }) => api.authorizeItemRemoval(id, staffId, pin));
+  const authorizeCatalogPriceChange = (values) => protectedRequest(({ staffId, pin }) => api.authorizePriceChange({
+    ...values, staff_id: staffId, pin,
+  }));
   const savePriceChange = (values) => protectedRequest((auth) => saveStaffPriceChange({ ...values, ...auth }, api));
-  return <StaffContext.Provider value={{ staff, login, logout, authorizeRemoval, savePriceChange }}>{children}</StaffContext.Provider>;
+  return <StaffContext.Provider value={{ staff, login, logout, authorizeRemoval, savePriceChange, authorizeCatalogPriceChange }}>{children}</StaffContext.Provider>;
 }
