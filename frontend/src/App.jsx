@@ -1,3 +1,4 @@
+import { cartKey } from './utils/apparel.js';
 import { useEffect, useReducer, useState } from 'react';
 import { fetchInventory } from './api.js';
 import { addToCart, prepareInventory } from './utils/cart.js';
@@ -9,17 +10,13 @@ import './manager.css';
 function transactionReducer(state, action) {
   switch (action.type) {
     case 'add': {
-      const result = addToCart(state.cart, action.catalog, action.code);
+      const result = addToCart(state.cart, action.catalog, action.code, action.selection);
       return { cart: result.cart, message: result.error || result.message };
     }
     case 'add-course': return addCourseToCart(state.cart, action.catalog, action.result);
-    case 'decrease': return { cart: state.cart.map((item) => item.code === action.code
+    case 'decrease': return { cart: state.cart.map((item) => cartKey(item) === action.key
       ? { ...item, quantity: Math.max(1, item.quantity - 1) } : item), message: 'Quantity updated.' };
-    case 'remove': return { cart: state.cart.filter((item) => item.code !== action.code), message: 'Item removed from the cart.' };
-    case 'update-price': return { cart: state.cart.map((item) => item.code === action.code
-      ? { ...item, catalogPriceCents: item.catalogPriceCents ?? item.priceCents,
-        priceCents: action.priceCents, priceOverride: action.priceOverride, multiBuy: null } : item),
-      message: 'Staff-authorized price applied to the cart.' };
+    case 'remove': return { cart: state.cart.filter((item) => cartKey(item) !== action.key), message: 'Item removed from the cart.' };
     case 'cancel': return { cart: [], message: 'Transaction canceled. Ready for the next customer.' };
     default: return state;
   }

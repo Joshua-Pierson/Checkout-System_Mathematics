@@ -1,3 +1,4 @@
+import { cartKey } from '../utils/apparel.js';
 import { useState } from 'react';
 import { discountLabel } from '../utils/discounts.js';
 import { checkout, checkoutCard } from '../api.js';
@@ -83,6 +84,11 @@ export default function CheckoutReceipt({ cart, totalsReady, busy, setBusy, stud
     
     <h3 className="receipt-heading">Receipt</h3>
     <div id="receipt-output">{result ? <>
+      {result.items.some((item) => item.size) && <section aria-label="Apparel selections">
+        <h4>Apparel selections</h4>
+        <ul>{result.items.filter((item) => item.size).map((item) => <li key={cartKey(item)}>{item.name}: {item.size}, {item.color} × {item.quantity}</li>)}</ul>
+        <p>Selections are shown here only. The backend receipt and inventory track the product’s combined quantity.</p>
+      </section>}
       {result.receipt ? (
         <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '11px', background: '#f4f8f0', padding: '15px', borderRadius: '6px' }}>
           {result.receipt.receipt_text}
@@ -90,7 +96,7 @@ export default function CheckoutReceipt({ cart, totalsReady, busy, setBusy, stud
       ) : (
         <>
           <p><strong>Status:</strong> {result.status.toUpperCase()}</p>
-          <ul>{result.items.map((item) => <li key={item.code}>{item.name} × {item.quantity}: {money(linePricing(item).totalCents)}{linePricing(item).savingsCents > 0 && ` (multi-buy savings ${money(linePricing(item).savingsCents)})`}</li>)}</ul>
+          <ul>{result.items.map((item) => <li key={cartKey(item)}>{item.name} × {item.quantity}: {money(linePricing(item).totalCents)}{linePricing(item).savingsCents > 0 && ` (multi-buy savings ${money(linePricing(item).savingsCents)})`}</li>)}</ul>
           <p>Subtotal: ${Number(result.subtotal || 0).toFixed(2)}</p>
           {result.multi_buy_discount > 0 && <p>Multi-buy Discount: -${Number(result.multi_buy_discount).toFixed(2)}</p>}
           {result.discount > 0 && <p>{discountLabel(result.discount_type)}: -${Number(result.discount).toFixed(2)}</p>}

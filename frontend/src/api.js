@@ -1,3 +1,4 @@
+import { aggregateCart } from './utils/apparel.js';
 const baseUrl = 'http://localhost:5001';
 
 async function request(path, { signal, method = 'GET', body } = {}) {
@@ -32,7 +33,7 @@ export const createItem = (item) => request('/api/items', { method: 'POST', body
 export const updateItem = (id, item) => request(`/api/items/${id}`, { method: 'PUT', body: item });
 export const deleteItem = (id) => request(`/api/items/${id}`, { method: 'DELETE' });
 
-const cartItems = (cart) => cart.map((item) => ({ item_id: Number(item.code), quantity: item.quantity }));
+const cartItems = aggregateCart;
 
 export const calculateCart = (cart, studentId, signal, employeeId) => request('/api/cart/calculate', { 
   method: 'POST', body: { items: cartItems(cart), student_id: studentId, employee_id: employeeId }, signal 

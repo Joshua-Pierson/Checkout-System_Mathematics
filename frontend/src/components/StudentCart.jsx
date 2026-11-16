@@ -1,3 +1,4 @@
+import { APPAREL_SIZES, APPAREL_COLORS, isApparel, cartKey, productQuantity, selectionLineTotal } from '../utils/apparel.js';
 import { useEffect, useRef, useState } from 'react';
 import { money, linePricing, multiBuySavings, confirmMultiBuy } from '../utils/cart.js';
 import { discountLabel } from '../utils/discounts.js';
@@ -6,6 +7,7 @@ import CourseLookup from './CourseLookup.jsx';
 import { calculateCart } from '../api.js';
 
 export default function StudentCart({ catalog, status, error, cart, message, dispatch, active }) {
+  const [selections, setSelections] = useState({});
   const [busy, setBusy] = useState(false);
   const [studentId, setStudentId] = useState('');
   const [employeeId, setEmployeeId] = useState('');
@@ -46,20 +48,20 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
     : !catalog.length ? 'No products are available.' : !matches.length ? 'No items match your search or selected category.'
     : `${matches.length} product${matches.length === 1 ? '' : 's'} found.`;
 
-  function add(itemCode) { if (ready && !busy) dispatch({ type: 'add', code: itemCode, catalog }); }
+  function add(itemCode, selection = selections[itemCode] || {}) { if (ready && !busy) dispatch({ type: 'add', code: itemCode, catalog, selection }); }
 
   function submit(event) {
     event.preventDefault();
     const itemCode = code.trim();
     const product = catalog.find((item) => item.code === itemCode);
-    const quantity = cart.find((item) => item.code === itemCode)?.quantity || 0;
+    const quantity = productQuantity(cart, itemCode);
     add(itemCode);
-    if (product && quantity < product.stock) setCode('');
+    if (product && quantity < product.stock && (!isApparel(product) || (selections[itemCode]?.size && selections[itemCode]?.color))) setCode('');
     codeInput.current?.focus();
   }
 
   function cancel() {
-    dispatch({ type: 'cancel' }); setCode(''); setCategory(''); setQuery(''); setStudentId(''); setEmployeeId(''); codeInput.current?.focus();
+    dispatch({ type: 'cancel' }); setCode(''); setCategory(''); setQuery(''); setStudentId(''); setEmployeeId(''); setSelections({}); codeInput.current?.focus();
   }
 
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -114,10 +116,22 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
             <table><caption className="sr-only">Choose a category or search, then add an item</caption>
               <thead><tr>{['Code','Product','Price','Category',''].map((heading, index) => <th scope="col" key={index}>{heading || <span className="sr-only">Action</span>}</th>)}</tr></thead>
               <tbody id="product-list">{matches.map((product) => {
-                const quantity = cart.find((item) => item.code === product.code)?.quantity || 0;
+                const quantity = productQuantity(cart, product.code);
                 return <tr key={product.code}><td><span className="item-code">{product.code}</span></td><td className="product-name">{product.name}</td>
                   <td className="price-cell">{money(product.priceCents)}{product.multiBuy && <small className="deal-label">{product.multiBuy.quantity} for {money(product.multiBuy.priceCents)}</small>}</td><td><span className="category-pill">{product.category}</span></td>
-                  <td><button className="add-product" type="button" aria-label={`Add ${product.name} to cart`} disabled={quantity >= product.stock} onClick={() => add(product.code)}>
+                  <td>{isApparel(product) && <div className="apparel-picker">
+                    <label htmlFor={`size-${product.code}`}>Size</label>
+                    <select id={`size-${product.code}`} value={selections[product.code]?.size || ''} disabled={product.stock === 0}
+                      onChange={(event) => setSelections((previous) => ({ ...previous, [product.code]: { ...previous[product.code], size: event.target.value } }))}>
+                      <option value="">Choose size</option>{APPAREL_SIZES.map((size) => <option key={size}>{size}</option>)}
+                    </select>
+                    <label htmlFor={`color-${product.code}`}>Color</label>
+                    <select id={`color-${product.code}`} value={selections[product.code]?.color || ''} disabled={product.stock === 0}
+                      onChange={(event) => setSelections((previous) => ({ ...previous, [product.code]: { ...previous[product.code], color: event.target.value } }))}>
+                      <option value="">Choose color</option>{APPAREL_COLORS.map((color) => <option key={color}>{color}</option>)}
+                    </select>
+                    <small>Size/color availability is not verified. Stock shown is for the whole product.</small>
+                  </div>}<button className="add-product" type="button" aria-label={`Add ${product.name} to cart`} disabled={quantity >= product.stock} onClick={() => add(product.code)}>
                     {product.stock === 0 ? 'Sold out' : <><span aria-hidden="true">+</span> Add</>}</button></td></tr>;
               })}</tbody>
             </table>
@@ -141,14 +155,15 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
             const backendData = totalsReady && totals.items
               ? totals.items.find((i) => String(i.item_id) === String(item.code))
               : null;
-            const displayTotal = backendData ? backendData.line_total * 100 : item.priceCents * item.quantity;
+            const displayTotal = backendData ? selectionLineTotal(cart, item, Math.round(backendData.line_total * 100)) : item.priceCents * item.quantity;
             const bundleApplied = backendData?.bundle_applied;
 
-            return <div className="cart-item" key={item.code}>
+            return <div className="cart-item" key={cartKey(item)}>
               <div className="cart-item-top">
                 <div>
                   <h3>{item.name}</h3>
                   <p>#{item.code} <span>•</span> {money(item.priceCents)} each</p>
+                  {item.size && <p>Size: {item.size} · Color: {item.color}</p>}
                   {bundleApplied && (
                     <p style={{ color: '#245337', fontWeight: '700', marginTop: '4px' }}>
                       * Bundle Deal: {backendData.bundle_trigger} for ${Number(backendData.bundle_price).toFixed(2)}
@@ -159,11 +174,11 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
               </div>
               <div className="cart-item-actions">
                 <div className="quantity-control">
-                  <button type="button" aria-label={`Decrease ${item.name} quantity`} disabled={item.quantity <= 1} onClick={() => dispatch({ type: 'decrease', code: item.code })}>-</button>
+                  <button type="button" aria-label={`Decrease ${item.name} quantity`} disabled={item.quantity <= 1} onClick={() => dispatch({ type: 'decrease', key: cartKey(item) })}>-</button>
                   <span aria-label={`Quantity ${item.quantity}`}>{item.quantity}</span>
-                  <button type="button" aria-label={`Increase ${item.name} quantity`} disabled={item.quantity >= item.stock} onClick={() => add(item.code)}>+</button>
+                  <button type="button" aria-label={`Increase ${item.name} quantity`} disabled={productQuantity(cart, item.code) >= item.stock} onClick={() => add(item.code, item)}>+</button>
                 </div>
-                <button className="remove-item" type="button" onClick={() => dispatch({ type: 'remove', code: item.code })} aria-label={`Remove ${item.name} from cart`}>Remove</button>
+                <button className="remove-item" type="button" onClick={() => dispatch({ type: 'remove', key: cartKey(item) })} aria-label={`Remove ${item.name} from cart`}>Remove</button>
               </div>
             </div>;
           })}

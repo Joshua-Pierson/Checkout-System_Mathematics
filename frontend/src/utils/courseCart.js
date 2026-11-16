@@ -1,3 +1,4 @@
+import { isApparel } from './apparel.js';
 export function addCourseToCart(cart, catalog, result) {
   const next = cart.map((item) => ({ ...item }));
   const added = [];
@@ -6,6 +7,7 @@ export function addCourseToCart(cart, catalog, result) {
     const product = catalog.find((product) => product.code === String(item.item_id));
     const existing = next.find((row) => row.code === String(item.item_id));
     if (!product) { rejected.push(`${item.name}: no longer in the catalog`); continue; }
+    if (isApparel(product)) { rejected.push(`${item.name}: choose its size and color in the catalog`); continue; }
     const quantity = Number(item.quantity);
     if (!Number.isSafeInteger(quantity) || quantity < 1) throw new Error('The backend returned an invalid course quantity.');
     if ((existing?.quantity || 0) + quantity > product.stock) {
