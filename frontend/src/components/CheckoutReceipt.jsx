@@ -3,7 +3,11 @@ import { discountLabel } from '../utils/discounts.js';
 import { checkout, checkoutCard } from '../api.js';
 import { money, linePricing } from '../utils/cart.js';
 
+<<<<<<< HEAD
 export default function CheckoutReceipt({ cart, totalsReady, busy, setBusy, studentId, employeeId = '' }) {
+=======
+export default function CheckoutReceipt({ cart, totalsReady, busy, setBusy, studentId, employeeId }) {
+>>>>>>> 8a70d878fa1d6751a7c98edc7cb6c5cec60efe38
   const [result, setResult] = useState(null);
   const [message, setMessage] = useState('');
   const [method, setMethod] = useState('cash');
@@ -93,7 +97,11 @@ export default function CheckoutReceipt({ cart, totalsReady, busy, setBusy, stud
           <ul>{result.items.map((item) => <li key={item.code}>{item.name} × {item.quantity}: {money(linePricing(item).totalCents)}{linePricing(item).savingsCents > 0 && ` (multi-buy savings ${money(linePricing(item).savingsCents)})`}</li>)}</ul>
           <p>Subtotal: ${Number(result.subtotal || 0).toFixed(2)}</p>
           {result.multi_buy_discount > 0 && <p>Multi-buy Discount: -${Number(result.multi_buy_discount).toFixed(2)}</p>}
+<<<<<<< HEAD
           {result.discount > 0 && <p>{discountLabel(result.discount_type)}: -${Number(result.discount).toFixed(2)}</p>}
+=======
+          {result.discount > 0 && <p>{result.discount_type ? `${result.discount_type} Discount` : 'Discount'}: -${Number(result.discount).toFixed(2)}</p>}
+>>>>>>> 8a70d878fa1d6751a7c98edc7cb6c5cec60efe38
           <p>Total Due: ${Number(result.total_due).toFixed(2)}</p>
         </>
       )}

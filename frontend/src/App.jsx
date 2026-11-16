@@ -16,6 +16,10 @@ function transactionReducer(state, action) {
     case 'decrease': return { cart: state.cart.map((item) => item.code === action.code
       ? { ...item, quantity: Math.max(1, item.quantity - 1) } : item), message: 'Quantity updated.' };
     case 'remove': return { cart: state.cart.filter((item) => item.code !== action.code), message: 'Item removed from the cart.' };
+    case 'update-price': return { cart: state.cart.map((item) => item.code === action.code
+      ? { ...item, catalogPriceCents: item.catalogPriceCents ?? item.priceCents,
+        priceCents: action.priceCents, priceOverride: action.priceOverride, multiBuy: null } : item),
+      message: 'Staff-authorized price applied to the cart.' };
     case 'cancel': return { cart: [], message: 'Transaction canceled. Ready for the next customer.' };
     default: return state;
   }

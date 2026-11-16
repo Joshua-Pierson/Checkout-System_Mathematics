@@ -3,12 +3,17 @@ import { money, linePricing, multiBuySavings, confirmMultiBuy } from '../utils/c
 import { discountLabel } from '../utils/discounts.js';
 import CheckoutReceipt from './CheckoutReceipt.jsx';
 import CourseLookup from './CourseLookup.jsx';
+import StaffOverrideModal from './StaffOverrideModal.jsx';
 import { calculateCart } from '../api.js';
 
 export default function StudentCart({ catalog, status, error, cart, message, dispatch, active }) {
   const [busy, setBusy] = useState(false);
   const [studentId, setStudentId] = useState('');
   const [employeeId, setEmployeeId] = useState('');
+<<<<<<< HEAD
+=======
+  const [overrideConfig, setOverrideConfig] = useState(null);
+>>>>>>> 8a70d878fa1d6751a7c98edc7cb6c5cec60efe38
   const [totals, setTotals] = useState({ cart: null, status: 'idle' });
 
   useEffect(() => {
@@ -16,8 +21,12 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
     const controller = new AbortController();
     setTotals({ cart, status: 'loading' });
     
+<<<<<<< HEAD
     // Recalculate for either discount ID; the backend selects one discount.
     calculateCart(cart, studentId.trim(), controller.signal, employeeId.trim()).then((result) => {
+=======
+    calculateCart(cart, studentId.trim(), employeeId.trim(), controller.signal).then((result) => {
+>>>>>>> 8a70d878fa1d6751a7c98edc7cb6c5cec60efe38
       if (!controller.signal.aborted) {
         confirmMultiBuy(cart, result);
         setTotals({ ...result, cart, studentId: studentId.trim(), employeeId: employeeId.trim(), status: 'ready' });
@@ -29,7 +38,12 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
     return () => controller.abort();
   }, [cart, studentId, employeeId]);
 
+<<<<<<< HEAD
   const totalsReady = totals.cart === cart && totals.status === 'ready' && (!cart.length || (totals.studentId === studentId.trim() && totals.employeeId === employeeId.trim()));
+=======
+  const totalsReady = totals.cart === cart && totals.status === 'ready' &&
+    (!cart.length || (totals.studentId === studentId.trim() && totals.employeeId === employeeId.trim()));
+>>>>>>> 8a70d878fa1d6751a7c98edc7cb6c5cec60efe38
 
   const [code, setCode] = useState('');
   const [category, setCategory] = useState('');
@@ -73,6 +87,7 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
     <fieldset className="student-workspace" disabled={busy}>
       <div className="catalog-column">
         <section className="student-id-card" aria-labelledby="student-details-heading">
+<<<<<<< HEAD
           <div><span className="small-kicker">LET S START HERE</span><h2 id="student-details-heading">Your discount details</h2>
             <p>Enter a student or employee ID, or continue as a guest. If both IDs qualify, the backend applies the larger discount; they never stack.</p></div>
           <div className="discount-id-fields">
@@ -83,6 +98,24 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
             <p id="student-id-status" role="status" aria-live="polite">
               {studentId.trim() ? 'Student ID entered. Eligibility is checked by the backend.' : 'Guest checkout available'}
             </p>
+=======
+          <div><span className="small-kicker">LET S START HERE</span><h2 id="student-details-heading">Your student details</h2>
+            <p>Have a Student ID? Add it here, or continue as a guest.</p></div>
+          <div className="id-fields">
+            <div className="id-field"><label htmlFor="student-id">Student ID <span className="optional">Optional</span></label>
+              <input id="student-id" name="student_id" type="text" value={studentId}
+                onChange={(event) => setStudentId(event.target.value)} autoComplete="off"
+                placeholder="Enter your student ID" aria-describedby="student-id-status" />
+              <p id="student-id-status" role="status" aria-live="polite">
+                {studentId.trim() ? 'ID entered. Discount applies to eligible items.' : 'Guest checkout available'}
+              </p>
+            </div>
+            <div className="id-field"><label htmlFor="employee-id">Employee ID <span className="optional">Optional</span></label>
+              <input id="employee-id" name="employee_id" type="text" value={employeeId}
+                onChange={(event) => setEmployeeId(event.target.value)} autoComplete="off"
+                placeholder="Enter your employee ID" />
+            </div>
+>>>>>>> 8a70d878fa1d6751a7c98edc7cb6c5cec60efe38
           </div>
           <div className="id-field"><label htmlFor="employee-id">Employee ID <span className="optional">Optional</span></label>
             <input id="employee-id" name="employee_id" type="text" value={employeeId}
@@ -163,7 +196,9 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
                   <span aria-label={`Quantity ${item.quantity}`}>{item.quantity}</span>
                   <button type="button" aria-label={`Increase ${item.name} quantity`} disabled={item.quantity >= item.stock} onClick={() => add(item.code)}>+</button>
                 </div>
-                <button className="remove-item" type="button" onClick={() => dispatch({ type: 'remove', code: item.code })} aria-label={`Remove ${item.name} from cart`}>Remove</button>
+                {item.priceOverride && <span className="price-override-label">Staff price: {money(item.priceCents)}</span>}
+                <button className="remove-item" type="button" onClick={() => setOverrideConfig({ type: 'PRICE', item })}>Change price</button>
+                <button className="remove-item" type="button" onClick={() => setOverrideConfig({ type: 'REMOVE', item })} aria-label={`Remove ${item.name} from cart`}>Remove</button>
               </div>
             </div>;
           })}
@@ -173,7 +208,11 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
         <div id="cart-total" className="totals" role="status" aria-live="polite">{totalsReady ? <>
           <p><span>Subtotal</span><span>${Number(totals.subtotal).toFixed(2)}</span></p>
           {totals.multi_buy_discount > 0 && <p><span>Multi-buy Discount</span><span>-${Number(totals.multi_buy_discount).toFixed(2)}</span></p>}
+<<<<<<< HEAD
           {totals.discount > 0 && <p><span style={{color: '#245337'}}>{discountLabel(totals.discount_type)}</span><span style={{color: '#245337'}}>-${Number(totals.discount).toFixed(2)}</span></p>}
+=======
+          {totals.discount > 0 && <p><span style={{color: '#245337'}}>{totals.discount_type ? `${totals.discount_type} Discount` : 'Discount'}</span><span style={{color: '#245337'}}>-${Number(totals.discount).toFixed(2)}</span></p>}
+>>>>>>> 8a70d878fa1d6751a7c98edc7cb6c5cec60efe38
           <p><span>Tax</span><span>${Number(totals.tax).toFixed(2)}</span></p>
           <p className="grand-total"><span>Total</span><strong>${Number(totals.total).toFixed(2)}</strong></p>
         </> : <p className="helper-text">{totals.cart === cart && totals.status === 'error' ? totals.error : 'Calculating total...'}</p>}</div>
@@ -182,5 +221,25 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
         <button id="cancel-transaction" className="cancel-transaction" type="button" disabled={!cart.length && !studentId && !employeeId} onClick={cancel}>Cancel transaction</button>
       </aside>
     </fieldset>
+    {overrideConfig && <StaffOverrideModal
+      actionType={overrideConfig.type}
+      item={overrideConfig.item}
+      onCancel={() => setOverrideConfig(null)}
+      onConfirm={(result) => {
+        const { type, item } = overrideConfig;
+        if (type === 'REMOVE') {
+          dispatch({ type: 'remove', code: item.code });
+        } else {
+          const priceCents = Math.round(Number(result.new_price) * 100);
+          dispatch({
+            type: 'update-price',
+            code: item.code,
+            priceCents,
+            priceOverride: { newPrice: Number(result.new_price), grantToken: result.grant_token },
+          });
+        }
+        setOverrideConfig(null);
+      }}
+    />}
   </>;
 }

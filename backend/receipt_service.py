@@ -24,6 +24,8 @@ def generate_receipt(cart_items, subtotal, total_tax, total_due, payment_method,
     
     for item in cart_items:
         lines.append(f"{item['name'][:25]:<25} x{item['quantity']}  ${item['line_total']:.2f}")
+        if item.get("price_overridden"):
+            lines.append(f"  * Staff-authorized unit price: ${item['price']:.2f}")
         if item.get('bundle_applied'):
             lines.append(f"  * Bundle Deal: {item['bundle_trigger']} for ${item['bundle_price']:.2f}")
         
