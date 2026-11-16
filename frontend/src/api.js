@@ -31,6 +31,12 @@ export async function fetchCategories(signal) {
 export const createItem = (item) => request('/api/items', { method: 'POST', body: item });
 export const updateItem = (id, item) => request(`/api/items/${id}`, { method: 'PUT', body: item });
 export const deleteItem = (id) => request(`/api/items/${id}`, { method: 'DELETE' });
+export const loginStaff = (staffId, pin) => request('/api/auth/login', {
+  method: 'POST', body: { staff_id: staffId, pin },
+});
+export const authorizeItemRemoval = (staffId, pin, itemId) => request('/api/cart/override/item', {
+  method: 'DELETE', body: { staff_id: staffId, pin, item_id: itemId },
+});
 
 const cartItems = (cart) => cart.map((item) => ({ item_id: Number(item.code), quantity: item.quantity }));
 

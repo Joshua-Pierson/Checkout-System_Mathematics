@@ -3,10 +3,14 @@ import { money, linePricing, multiBuySavings, confirmMultiBuy } from '../utils/c
 import { discountLabel } from '../utils/discounts.js';
 import CheckoutReceipt from './CheckoutReceipt.jsx';
 import CourseLookup from './CourseLookup.jsx';
-import { calculateCart } from '../api.js';
+import { authorizeItemRemoval, calculateCart } from '../api.js';
 
-export default function StudentCart({ catalog, status, error, cart, message, dispatch, active }) {
+export default function StudentCart({ catalog, status, error, cart, message, dispatch, active, staff }) {
   const [busy, setBusy] = useState(false);
+  const [overrideBusy, setOverrideBusy] = useState(false);
+  const [overrideItem, setOverrideItem] = useState(null);
+  const [overridePin, setOverridePin] = useState('');
+  const [overrideError, setOverrideError] = useState('');
   const [studentId, setStudentId] = useState('');
   const [employeeId, setEmployeeId] = useState('');
   const [totals, setTotals] = useState({ cart: null, status: 'idle' });
@@ -62,6 +66,31 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
     dispatch({ type: 'cancel' }); setCode(''); setCategory(''); setQuery(''); setStudentId(''); setEmployeeId(''); codeInput.current?.focus();
   }
 
+  async function submitStaffRemoval(event, item) {
+    event.preventDefault();
+    if (!staff || overrideBusy) return;
+
+    setOverrideBusy(true);
+    setOverrideError('');
+    try {
+      const result = await authorizeItemRemoval(staff.staff_id, overridePin, Number(item.code));
+      if (typeof result.authorized_by !== 'string' || !result.authorized_by) {
+        throw new Error('The backend did not confirm staff authorization.');
+      }
+      dispatch({
+        type: 'remove',
+        code: item.code,
+        message: `${item.name} removed and logged by ${result.authorized_by}.`,
+      });
+      setOverrideItem(null);
+      setOverridePin('');
+    } catch (requestError) {
+      setOverrideError(requestError.message);
+    } finally {
+      setOverrideBusy(false);
+    }
+  }
+
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   return <>
@@ -70,7 +99,7 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
         <p>Everything you need, all in one place.</p></div>
       <span className="page-tag">STUDENT CHECKOUT</span>
     </div>
-    <fieldset className="student-workspace" disabled={busy}>
+    <fieldset className="student-workspace" disabled={busy || overrideBusy}>
       <div className="catalog-column">
         <section className="student-id-card" aria-labelledby="student-details-heading">
           <div><span className="small-kicker">LET S START HERE</span><h2 id="student-details-heading">Your discount details</h2>
@@ -164,7 +193,26 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
                   <button type="button" aria-label={`Increase ${item.name} quantity`} disabled={item.quantity >= item.stock} onClick={() => add(item.code)}>+</button>
                 </div>
                 <button className="remove-item" type="button" onClick={() => dispatch({ type: 'remove', code: item.code })} aria-label={`Remove ${item.name} from cart`}>Remove</button>
+                {staff && <button className="staff-remove-item" type="button"
+                  onClick={() => { setOverrideItem(item.code); setOverridePin(''); setOverrideError(''); }}>
+                  Staff remove
+                </button>}
               </div>
+              {staff && overrideItem === item.code && <form className="staff-removal-form"
+                onSubmit={(event) => submitStaffRemoval(event, item)}>
+                <label htmlFor={`staff-removal-pin-${item.code}`}>Confirm staff PIN ({staff.staff_id})</label>
+                <input id={`staff-removal-pin-${item.code}`} type="password" inputMode="numeric"
+                  autoComplete="current-password" required value={overridePin}
+                  onChange={(event) => setOverridePin(event.target.value)} />
+                {overrideError && <p className="staff-removal-error" role="alert">{overrideError}</p>}
+                <div>
+                  <button type="submit" disabled={overrideBusy}>Authorize and remove</button>
+                  <button type="button" className="remove-item" disabled={overrideBusy}
+                    onClick={() => { setOverrideItem(null); setOverridePin(''); setOverrideError(''); }}>
+                    Cancel
+                  </button>
+                </div>
+              </form>}
             </div>;
           })}
         </div>

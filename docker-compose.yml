@@ -42,7 +42,13 @@ services:
       - MYSQL_DATABASE=pos_inventory
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./backend/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./backend/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./backend/discount_schema.sql:/docker-entrypoint-initdb.d/02-discounts.sql:ro
+      - ./backend/multibuy_schema.sql:/docker-entrypoint-initdb.d/03-multibuy.sql:ro
+      - ./backend/course_schema.sql:/docker-entrypoint-initdb.d/04-courses.sql:ro
+      - ./backend/auth_schema.sql:/docker-entrypoint-initdb.d/05-auth.sql:ro
+      - ./backend/audit_schema.sql:/docker-entrypoint-initdb.d/06-audit.sql:ro
+      - ./backend/audit_schema_update.sql:/docker-entrypoint-initdb.d/07-audit-update.sql:ro
 
 volumes:
   mysql_data:

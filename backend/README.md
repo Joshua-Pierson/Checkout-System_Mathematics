@@ -40,6 +40,9 @@ The Flask backend exposes the following routes for data retrieval, calculation, 
 - **Process Card Checkout:** `POST http://localhost:5001/api/checkout/card`
 - **Retrieve Prior Receipt:** `GET http://localhost:5001/api/receipts/<transaction_id>`
 
+### Staff Authentication
+- **Staff Login:** `POST http://localhost:5001/api/auth/login` with `staff_id` and `pin`
+
 ### Catalog Mutations (Manager Operations)
 - **Create Item:** `POST http://localhost:5001/api/items`
 - **Update Item:** `PUT http://localhost:5001/api/items/<item_id>`
@@ -82,6 +85,13 @@ docker compose up --build
 docker compose up --build -d
 
 ```
+
+On a new database volume, MySQL applies the numbered SQL files mounted under
+`/docker-entrypoint-initdb.d`. The backend seeder then inserts inventory before
+the default multi-buy and course mappings, which reference inventory items.
+The authentication schema also seeds the demo `ADMIN` login with PIN `1234`.
+The audit schema records staff-authorized item removals and price overrides.
+MySQL does not rerun initialization scripts for an existing data volume.
 
 #### 3. Verifying Container Status
 

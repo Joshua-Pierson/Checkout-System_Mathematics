@@ -4,6 +4,7 @@ import { addToCart, prepareInventory } from './utils/cart.js';
 import { addCourseToCart } from './utils/courseCart.js';
 import StudentCart from './components/StudentCart.jsx';
 import ManagerCatalog from './components/ManagerCatalog.jsx';
+import StaffLogin from './components/StaffLogin.jsx';
 import './manager.css';
 
 function transactionReducer(state, action) {
@@ -15,7 +16,7 @@ function transactionReducer(state, action) {
     case 'add-course': return addCourseToCart(state.cart, action.catalog, action.result);
     case 'decrease': return { cart: state.cart.map((item) => item.code === action.code
       ? { ...item, quantity: Math.max(1, item.quantity - 1) } : item), message: 'Quantity updated.' };
-    case 'remove': return { cart: state.cart.filter((item) => item.code !== action.code), message: 'Item removed from the cart.' };
+    case 'remove': return { cart: state.cart.filter((item) => item.code !== action.code), message: action.message || 'Item removed from the cart.' };
     case 'cancel': return { cart: [], message: 'Transaction canceled. Ready for the next customer.' };
     default: return state;
   }
@@ -23,6 +24,7 @@ function transactionReducer(state, action) {
 
 export default function App() {
   const [view, setView] = useState('student');
+  const [staff, setStaff] = useState(null);
   const [inventoryVersion, setInventoryVersion] = useState(0);
   const [inventory, setInventory] = useState({ catalog: [], status: 'loading', error: '' });
   const [transaction, dispatch] = useReducer(transactionReducer, { cart: [], message: '' });
@@ -46,16 +48,23 @@ export default function App() {
       </a>
       <nav className="view-switch" aria-label="Choose view">
         <button type="button" aria-pressed={view === 'student'} onClick={() => setView('student')}>Student</button>
-        <button type="button" aria-pressed={view !== 'student'} onClick={() => setView('manager')}>Manager</button>
+        <button type="button" aria-pressed={view !== 'student'}
+          onClick={() => setView(staff ? 'manager' : 'manager-login')}>Manager</button>
       </nav>
     </header>
     <main>
       <section hidden={view !== 'student'} aria-labelledby="cart-heading">
-        <StudentCart {...inventory} cart={transaction.cart} message={transaction.message}
+        <StudentCart {...inventory} staff={staff} cart={transaction.cart} message={transaction.message}
           dispatch={dispatch} active={view === 'student'} />
       </section>
-      <section hidden={view !== 'manager' && view !== 'manager-page'} aria-labelledby="manager-heading">
-        {view !== 'student' && <ManagerCatalog {...inventory} onSaved={() => { dispatch({ type: 'cancel' }); setInventoryVersion((version) => version + 1); }} onStudent={() => setView('student')} onPage={(isPage) => setView(isPage ? 'manager-page' : 'manager')} />}
+      <section hidden={view !== 'manager' && view !== 'manager-page' && view !== 'manager-login'} aria-labelledby="manager-heading">
+        {view === 'manager-login' && <StaffLogin
+          onLogin={(profile) => { setStaff(profile); setView('manager'); }}
+          onStudent={() => setView('student')} />}
+        {(view === 'manager' || view === 'manager-page') && staff && <ManagerCatalog {...inventory}
+          staff={staff} onLogout={() => { setStaff(null); setView('student'); }}
+          onSaved={() => { dispatch({ type: 'cancel' }); setInventoryVersion((version) => version + 1); }}
+          onStudent={() => setView('student')} onPage={(isPage) => setView(isPage ? 'manager-page' : 'manager')} />}
       </section>
     </main>
     <footer className="app-footer">Campus Checkout <span>Find your essentials. Make them yours.</span></footer>

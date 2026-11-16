@@ -11,13 +11,13 @@ const actions = [
   { value: 'bundles', label: 'Manage Multi-Buy Bundles' },
 ];
 
-export default function ManagerCatalog({ onStudent, onSaved, catalog, status, error }) {
+export default function ManagerCatalog({ staff, onStudent, onLogout, onSaved, catalog, status, error }) {
   const [action, setAction] = useState('add');
   const [saving, setSaving] = useState(false);
   return <>
     <p className="eyebrow">MANAGER WORKSPACE</p>
     <h1 id="manager-heading">Catalog Management</h1>
-    <p>Manage catalog items and create named course supply kits.</p>
+    <p>Signed in as {staff.name} ({staff.role}). Manage catalog items and create named course supply kits.</p>
     <CatalogList catalog={catalog} status={status} error={error} />
     <div className="manager-actions" role="group" aria-label="Catalog action">
       {actions.map((entry) => <button key={entry.value} type="button"
@@ -32,5 +32,6 @@ export default function ManagerCatalog({ onStudent, onSaved, catalog, status, er
       )}
     </div>
     <button className="manager-student-return" type="button" disabled={saving} onClick={onStudent}>Back to Student View</button>
+    <button className="manager-student-return" type="button" disabled={saving} onClick={onLogout}>Log out</button>
   </>;
 }

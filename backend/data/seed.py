@@ -53,6 +53,23 @@ def seed_database():
             conn.commit()
             print("Database successfully seeded from CSV.")
 
+    cursor.executemany(
+        """INSERT IGNORE INTO multibuy_bundles
+        (item_id, trigger_quantity, bundle_price) VALUES (%s, %s, %s)""",
+        [(1003, 5, 12.00)],
+    )
+    cursor.executemany(
+        """INSERT IGNORE INTO course_bundles (course_code, item_id, quantity)
+        VALUES (%s, %s, %s)""",
+        [
+            ("CS101", 1001, 1),
+            ("CS101", 1003, 2),
+            ("MATH201", 1002, 1),
+            ("MATH201", 1003, 5),
+        ],
+    )
+    conn.commit()
+
     cursor.close()
     conn.close()
 

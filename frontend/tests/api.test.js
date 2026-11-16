@@ -39,3 +39,49 @@ test('requests match Flask routes, payloads, response envelope, and errors', asy
     await assert.rejects(api.fetchInventory(), /invalid response/);
   } finally { globalThis.fetch = original; }
 });
+
+test('staff login sends credentials to Flask and returns the authenticated staff profile', async () => {
+  const original = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, ...options });
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ status: 'success', staff: { staff_id: 'ADMIN', name: 'System Admin', role: 'manager' } }),
+    };
+  };
+  try {
+    const result = await api.loginStaff('ADMIN', '1234');
+    assert.deepEqual(result.staff, { staff_id: 'ADMIN', name: 'System Admin', role: 'manager' });
+    assert.equal(new URL(calls[0].url).pathname, '/api/auth/login');
+    assert.equal(calls[0].method, 'POST');
+    assert.deepEqual(JSON.parse(calls[0].body), { staff_id: 'ADMIN', pin: '1234' });
+    globalThis.fetch = async () => ({
+      ok: false,
+      status: 401,
+      json: async () => ({ status: 'error', message: 'Authentication failed: Invalid Staff ID or PIN.' }),
+    });
+    await assert.rejects(api.loginStaff('ADMIN', 'wrong'), /Authentication failed: Invalid Staff ID or PIN/);
+  } finally { globalThis.fetch = original; }
+});
+
+test('staff item removal sends credentials and item ID to the backend override route', async () => {
+  const original = globalThis.fetch;
+  const calls = [];
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, ...options });
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({ status: 'success', authorized_by: 'System Admin' }),
+    };
+  };
+  try {
+    const result = await api.authorizeItemRemoval('ADMIN', '1234', 1003);
+    assert.equal(result.authorized_by, 'System Admin');
+    assert.equal(new URL(calls[0].url).pathname, '/api/cart/override/item');
+    assert.equal(calls[0].method, 'DELETE');
+    assert.deepEqual(JSON.parse(calls[0].body), { staff_id: 'ADMIN', pin: '1234', item_id: 1003 });
+  } finally { globalThis.fetch = original; }
+});
