@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { money, linePricing, multiBuySavings, confirmMultiBuy } from '../utils/cart.js';
 import CheckoutReceipt from './CheckoutReceipt.jsx';
+import CourseLookup from './CourseLookup.jsx';
 import { calculateCart } from '../api.js';
 
 export default function StudentCart({ catalog, status, error, cart, message, dispatch, active }) {
@@ -81,6 +82,8 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
             </p>
           </div>
         </section>
+
+        <CourseLookup />
 
         <section className="panel products-panel" aria-labelledby="products-heading">
           <div className="panel-heading"><div><p className="small-kicker">BROWSE THE CATALOG</p><h2 id="products-heading">Available products</h2></div>

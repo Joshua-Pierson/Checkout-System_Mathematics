@@ -69,3 +69,11 @@ export const updateBundle = (itemId, data) => request(`/api/discounts/bundles/${
 export const deleteBundle = (itemId) => request(`/api/discounts/bundles/${itemId}`, { method: 'DELETE' });
 
 export const createBundle = (bundle) => request('/api/bundles', { method: 'POST', body: bundle });
+
+export async function fetchCourseSupplies(courseCode, signal) {
+  const code = String(courseCode).trim().toUpperCase();
+  if (!code) throw new Error('Enter a course number.');
+  const result = await request(`/api/courses/${encodeURIComponent(code)}`, { signal });
+  if (!Array.isArray(result.supplies)) throw new Error('The backend returned invalid course supplies.');
+  return result;
+}
