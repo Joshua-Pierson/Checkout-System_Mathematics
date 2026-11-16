@@ -68,10 +68,9 @@ export function prepareMultiBuy(quantity, price, unitPriceCents) {
 
 export function linePricing(item) {
   const regularCents = item.priceCents * item.quantity;
-  const multiBuy = item.priceOverride ? null : item.multiBuy;
-  const bundles = multiBuy ? Math.floor(item.quantity / multiBuy.quantity) : 0;
-  const totalCents = multiBuy
-    ? bundles * multiBuy.priceCents + (item.quantity % multiBuy.quantity) * item.priceCents
+  const bundles = item.multiBuy ? Math.floor(item.quantity / item.multiBuy.quantity) : 0;
+  const totalCents = item.multiBuy
+    ? bundles * item.multiBuy.priceCents + (item.quantity % item.multiBuy.quantity) * item.priceCents
     : regularCents;
   return { regularCents, totalCents, savingsCents: regularCents - totalCents, bundles };
 }
