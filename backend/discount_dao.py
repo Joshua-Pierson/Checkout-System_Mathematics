@@ -53,6 +53,50 @@ class DiscountDAO:
             cursor.close()
             conn.close()
 
+    def get_multibuy_rules(self):
+        """Fetches all active multi-buy deals mapped by item_id."""
+        conn = self.inventory_dao.get_connection()
+        cursor = conn.cursor(dictionary=True)
+        try:
+            cursor.execute("SELECT item_id, trigger_quantity, bundle_price FROM multibuy_bundles")
+            return {
+                row["item_id"]: {
+                    "trigger": int(row["trigger_quantity"]),
+                    "price": float(row["bundle_price"])
+                } for row in cursor.fetchall()
+            }
+        finally:
+            cursor.close()
+            conn.close()
+
+    def update_multibuy_rule(self, item_id, trigger_quantity, bundle_price):
+        """UPSERTs a multi-buy bundle rule for a specific item."""
+        conn = self.inventory_dao.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                INSERT INTO multibuy_bundles (item_id, trigger_quantity, bundle_price)
+                VALUES (%s, %s, %s)
+                ON DUPLICATE KEY UPDATE trigger_quantity=%s, bundle_price=%s
+            """, (item_id, int(trigger_quantity), float(bundle_price), int(trigger_quantity), float(bundle_price)))
+            conn.commit()
+            return True
+        finally:
+            cursor.close()
+            conn.close()
+
+    def delete_multibuy_rule(self, item_id):
+        """Removes a multi-buy deal."""
+        conn = self.inventory_dao.get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("DELETE FROM multibuy_bundles WHERE item_id = %s", (item_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+        finally:
+            cursor.close()
+            conn.close()
+
     def update_discount_rule(self, profile_name, discount_type, discount_value):
         """UPSERTs a global discount rule."""
         if discount_type not in ('percent', 'dollar'):
