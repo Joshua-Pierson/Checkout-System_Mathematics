@@ -1,6 +1,7 @@
 import { useEffect, useReducer, useState } from 'react';
 import { fetchInventory } from './api.js';
 import { addToCart, prepareInventory } from './utils/cart.js';
+import { addCourseToCart } from './utils/courseCart.js';
 import StudentCart from './components/StudentCart.jsx';
 import ManagerCatalog from './components/ManagerCatalog.jsx';
 import './manager.css';
@@ -11,6 +12,7 @@ function transactionReducer(state, action) {
       const result = addToCart(state.cart, action.catalog, action.code);
       return { cart: result.cart, message: result.error || result.message };
     }
+    case 'add-course': return addCourseToCart(state.cart, action.catalog, action.result);
     case 'decrease': return { cart: state.cart.map((item) => item.code === action.code
       ? { ...item, quantity: Math.max(1, item.quantity - 1) } : item), message: 'Quantity updated.' };
     case 'remove': return { cart: state.cart.filter((item) => item.code !== action.code), message: 'Item removed from the cart.' };

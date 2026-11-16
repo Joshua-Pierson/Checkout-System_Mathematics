@@ -77,3 +77,13 @@ export async function fetchCourseSupplies(courseCode, signal) {
   if (!Array.isArray(result.supplies)) throw new Error('The backend returned invalid course supplies.');
   return result;
 }
+
+export async function validateCourseBundle(courseCode, signal) {
+  const result = await request('/api/cart/course', {
+    method: 'POST', body: { course_code: String(courseCode).trim().toUpperCase() }, signal,
+  });
+  if (!Array.isArray(result.added) || !Array.isArray(result.out_of_stock)) {
+    throw new Error('The backend returned an invalid course bundle.');
+  }
+  return result;
+}

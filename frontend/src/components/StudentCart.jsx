@@ -83,7 +83,7 @@ export default function StudentCart({ catalog, status, error, cart, message, dis
           </div>
         </section>
 
-        <CourseLookup />
+        <CourseLookup onAdd={(result, freshCatalog) => dispatch({ type: 'add-course', result, catalog: freshCatalog })} />
 
         <section className="panel products-panel" aria-labelledby="products-heading">
           <div className="panel-heading"><div><p className="small-kicker">BROWSE THE CATALOG</p><h2 id="products-heading">Available products</h2></div>
